@@ -13,7 +13,9 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     email: Mapped[str] = mapped_column(String(), nullable=False)
     password: Mapped[str] = mapped_column(String(), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(default=timezone.utc)
+    created_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     def __repr__(self) -> str:
         return f"User(id={self.id!r}, name={self.name!r}, fullname={self.email!r})"

@@ -27,6 +27,6 @@ class UserCreate(BaseModel):
         return v
 
 
-class UserResponce(BaseModel):
+class UserResponse(BaseModel):
     id: int
 
