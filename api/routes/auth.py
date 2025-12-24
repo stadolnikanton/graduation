@@ -1,10 +1,10 @@
+from unittest import result
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
 from schemas.user import UserCreate, UserResponse
 
 from models.user import User
-from core.secure import hash_password
 from app.db import async_session_maker
 from schemas.token import Token, LoginRequest, RefreshTokenRequest
 from core.secure import (
@@ -36,7 +36,7 @@ async def register(user_data: UserCreate):
         user = User(
             name=user_data.name,
             email=user_data.email,
-            password=hash_password(user_data.password),
+            password=get_password_hash(user_data.password),
         )
 
         session.add(user)
@@ -53,12 +53,24 @@ async def register(user_data: UserCreate):
         }
 
 
-@router.get("/login")
-async def login():
-    return {"200": "login"}
+@router.post("/login", response_model=Token)
+async def login(user_data: LoginRequest):
+    async with async_session_maker() as session:
+        result = await session.execute(select(User).where(User.email == user_data.email))
+        
+        user = result.scalar_one_or_none()
 
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
 
-@router.get("/logout")
-async def logout():
-    return {"200": "logout"}
-
+        if not verify_password(user_data.password, user.password):
+            raise HTTPException(status_code=401, detail="Incorrect password")
+            
+        access_token = create_access_token(data={"sub": str(user.id)})
+        refresh_token = create_refresh_token(data={"sub": str(user.id)})
+        
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+        }

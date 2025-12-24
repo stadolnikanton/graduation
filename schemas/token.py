@@ -9,9 +9,9 @@ class Token(BaseModel):
 
 
 class TokenPayload(BaseModel):
-    sub: str  # user_id или email
+    sub: str
     exp: int
-    type: str  # "access" или "refresh"
+    type: str
 
 
 class LoginRequest(BaseModel):

@@ -4,16 +4,9 @@ import jwt
 
 from app.config import settings
 from passlib.context import CryptContext
+from passlib.hash import argon2
 
-import hashlib
-
-
-def hash_password(password):
-    hashed_string = hashlib.sha256(password.encode()).hexdigest()
-    return hashed_string
-
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
