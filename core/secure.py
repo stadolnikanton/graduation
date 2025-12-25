@@ -53,7 +53,7 @@ def get_password_hash(password: str) -> str:
 def verify_token(token: str) -> Optional[dict]:
     try:
         payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+            token, settings.SECRET_KEY.get_secret_value(), algorithms=[settings.ALGORITHM]
         )
         return payload
     except jwt.PyJWTError:
