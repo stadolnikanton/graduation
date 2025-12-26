@@ -1,7 +1,7 @@
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
-
 from datetime import datetime, timezone
+
+from sqlalchemy import String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
 
@@ -15,6 +15,20 @@ class User(Base):
     password: Mapped[str] = mapped_column(String(), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
+
+    files: Mapped[list["File"]] = relationship(
+        "File",
+        back_populates="owner_files",
+        lazy="select",
+        cascade="all, delete-orphan",
+    )
+
+    tokens: Mapped[list["BlacklistedToken"]] = relationship(
+        "BlacklistedToken",
+        back_populates="owner_jwt",
+        lazy="select",
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:
