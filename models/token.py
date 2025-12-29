@@ -20,8 +20,10 @@ class BlacklistedToken(Base):
         default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
     reason: Mapped[str] = mapped_column(Text, nullable=True)
-
-    owner_jwt: Mapped["User"] = relationship("User", back_populates="blacklisted_tokens")
+    owner_jwt: Mapped["User"] = relationship(
+        "User", 
+        back_populates="blacklisted_tokens"
+    )
 
     def __repr__(self) -> str:
         return f"BlacklistedToken(id={self.id!r}, jti={self.jti!r}, user_id={self.user_id!r})"

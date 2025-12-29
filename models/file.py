@@ -11,6 +11,7 @@ class File(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     type: Mapped[str] = mapped_column(String(), nullable=False)
     owner: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
     path: Mapped[str] = mapped_column(String(), nullable=False)

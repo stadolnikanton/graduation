@@ -19,17 +19,18 @@ class User(Base):
 
     files: Mapped[list["File"]] = relationship(
         "File",
-        back_populates="owner_files",
+        back_populates="owner_user",
         lazy="select",
         cascade="all, delete-orphan",
     )
 
-    tokens: Mapped[list["BlacklistedToken"]] = relationship(
+    blacklisted_tokens: Mapped[list["BlacklistedToken"]] = relationship(
         "BlacklistedToken",
         back_populates="owner_jwt",
         lazy="select",
         cascade="all, delete-orphan",
     )
+
 
     def __repr__(self) -> str:
         return f"User(id={self.id!r}, name={self.name!r}, fullname={self.email!r})"

@@ -19,6 +19,8 @@ class Settings(BaseSettings):
             os.path.dirname(os.path.abspath(__file__)), "..", ".env"
         )
     )
+    UPLOAD_DIR: str = "static"
+
 
 
 settings = Settings()
@@ -29,3 +31,12 @@ def get_db_url():
         f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PASSWORD}@"
         f"{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
     )
+
+
+def get_files_path():
+    if os.path.exists(settings.UPLOAD_DIR):
+        return settings.UPLOAD_DIR
+    
+    else:
+        os.mkdir(settings.UPLOAD_DIR)
+        return settings.UPLOAD_DIR
