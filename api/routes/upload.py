@@ -1,9 +1,9 @@
 import os
 import uuid
 from pathlib import Path
-from typing import Optional, List
+from typing import List
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 
