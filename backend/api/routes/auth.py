@@ -112,7 +112,8 @@ async def refresh(token: RefreshTokenRequest):
 
 @router.post("/logout")
 async def logout(
-    current_user: User = Depends(get_current_user), token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user),
+    token: str = Depends(oauth2_scheme),
 ):
     async with async_session_maker() as session:
         from core.secure import verify_token
