@@ -1,9 +1,10 @@
 import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy import select
 
 from app.db import async_session_maker
+
 from core.deps import get_current_user, oauth2_scheme
 from core.secure import (
     create_access_token,
@@ -21,7 +22,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=Token)
-async def register(user_data: UserCreate):
+async def register(user_data: UserCreate, response: Response):
     async with async_session_maker() as session:
         email_exists = await session.execute(
             select(User).where(User.email == user_data.email)
@@ -48,15 +49,31 @@ async def register(user_data: UserCreate):
         access_token = create_access_token(data={"sub": str(user.id)})
         refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            max_age=30*60,
+            secure=False,
+            samesite="strict"
+        )
+
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            max_age=7*24*60*60,
+            secure=False,  # True в production с HTTPS
+            samesite="strict"
+        )
+
         return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "bearer",
+            "status": 200,
         }
 
 
 @router.post("/login", response_model=Token)
-async def login(user_data: LoginRequest):
+async def login(user_data: LoginRequest, response: Response):
     async with async_session_maker() as session:
         result = await session.execute(
             select(User).where(User.email == user_data.email)
@@ -73,16 +90,32 @@ async def login(user_data: LoginRequest):
         access_token = create_access_token(data={"sub": str(user.id)})
         refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            max_age=30*60,
+            secure=False,
+            samesite="strict"
+        )
+
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            max_age=7*24*60*60,
+            secure=False,  # True в production с HTTPS
+            samesite="strict"
+        )
+
         return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "bearer",
+            "status": 200,
         }
 
 
 @router.post("/refresh", response_model=Token)
-async def refresh(token: RefreshTokenRequest):
-    refresh_token = token.refresh_token
+async def refresh(request: Request, response: Response):
+    refresh_token = request.cookies.get("refresh_token")
 
     payload = verify_token(refresh_token)
     if not payload:
@@ -103,21 +136,39 @@ async def refresh(token: RefreshTokenRequest):
 
         access_token = create_access_token(data={"sub": str(user.id)})
         refresh_token = create_refresh_token(data={"sub": str(user.id)})
+
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            max_age=30*60,
+            secure=False,
+            samesite="strict"
+        )
+
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            max_age=7*24*60*60,
+            secure=False,  # True в production с HTTPS
+            samesite="strict"
+        )
+
         return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "bearer",
+            "status": 200,
         }
 
 
 @router.post("/logout")
 async def logout(
+    response: Response,
     current_user: User = Depends(get_current_user),
-    token: str = Depends(oauth2_scheme),
 ):
     async with async_session_maker() as session:
-        from core.secure import verify_token
-
+        
+        token = response.cookies.get("refresh_token")
+        
         payload = verify_token(token)
 
         if not payload:
@@ -145,4 +196,7 @@ async def logout(
         session.add(blacklisted_access)
         await session.commit()
 
-    return {"status": "success", "message": "Successfully logged out"}
+        response.delete_cookie("access_token")
+        response.delete_cookie("refresh_token")
+    
+        return {"status": 200, "message": "Logged out successfully"}

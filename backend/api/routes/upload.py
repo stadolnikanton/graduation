@@ -3,15 +3,16 @@ import uuid
 from pathlib import Path
 from typing import List
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from core.secure import verify_token
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, Request
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 
 from app.config import get_files_path
 from app.db import async_session_maker
-from core.deps import get_current_user
+from core.deps import get_current_user_id
 from models.file import File as FileModel
-from models.user import User
+
 
 router = APIRouter(prefix="/files", tags=["files"])
 
@@ -20,10 +21,12 @@ UPLOAD_DIR = get_files_path()
 
 
 @router.get("/")
-async def get_files_user(current_user: User = Depends(get_current_user)):
+async def get_files_user(request: Request):
+    user_id = get_current_user_id(request)
+
     async with async_session_maker() as session:
         result = await session.execute(
-            select(FileModel).where(FileModel.owner == current_user.id)
+            select(FileModel).where(FileModel.owner == user_id)
         )
         files = result.scalars().all()
 
@@ -49,8 +52,10 @@ async def get_files_user(current_user: User = Depends(get_current_user)):
 @router.get("/{file_id}/download")
 async def download_file(
     file_id: int,
-    current_user: User = Depends(get_current_user),
+    request: Request
 ):
+    user_id = get_current_user_id(request)
+
     async with async_session_maker() as session:
         result = await session.execute(select(FileModel).where(FileModel.id == file_id))
         db_file = result.scalar_one_or_none()
@@ -58,7 +63,7 @@ async def download_file(
         if not db_file:
             raise HTTPException(404, "Файл не найден")
 
-        if db_file.owner != current_user.id:
+        if db_file.owner != user_id:
             raise HTTPException(403, "Нет доступа к файлу")
 
     file_path = Path(db_file.path)
@@ -72,10 +77,12 @@ async def download_file(
 
 @router.post("/upload/", response_model=None)
 async def create_file(
-    file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
+    request: Request,
+    file: UploadFile = File(...)
 ):
+    user_id = get_current_user_id(request)
 
+    
     file_extension = os.path.splitext(file.filename)[1]
     unique_filename = f"{uuid.uuid4()}{file_extension}"
     file_path = Path(UPLOAD_DIR) / unique_filename
@@ -87,7 +94,7 @@ async def create_file(
         "name": unique_filename,
         "original_filename": file.filename,
         "type": file.content_type,
-        "owner": current_user.id,
+        "owner": user_id,
         "path": str(file_path),
         "size": len(content),
     }
@@ -110,9 +117,11 @@ async def create_file(
 
 @router.post("/upload/multiple")
 async def create_files(
-    files: List[UploadFile] = File(...),
-    current_user: User = Depends(get_current_user)
+    request: Request,
+    files: List[UploadFile] = File(...)
 ):
+    user_id = get_current_user_id(request)
+    
     results = []
     
     for file in files:
@@ -129,7 +138,7 @@ async def create_files(
                 "name": unique_filename,
                 "original_filename": file.filename,
                 "type": file.content_type,
-                "owner": current_user.id,
+                "owner": user_id,
                 "path": str(file_path),
                 "size": len(content),
             }

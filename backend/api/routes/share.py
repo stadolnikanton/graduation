@@ -1,14 +1,17 @@
-from datetime import datetime, timedelta
 import secrets
-from sqlalchemy.future import select
-from fastapi import APIRouter, Depends, Form, HTTPException
-from fastapi.responses import FileResponse
+
+from datetime import datetime, timedelta
 from pathlib import Path
 
+from sqlalchemy.future import select
+
+from fastapi import APIRouter, Form, HTTPException, Response, Request
+from fastapi.responses import FileResponse
+
 from app.db import async_session_maker
-from core.deps import get_current_user
+from core.deps import get_current_user_id
+
 from models.file import File as FileModel
-from models.user import User
 from models.link import ShareLink
 
 router = APIRouter(prefix="/share", tags=["share"])
@@ -17,14 +20,16 @@ router = APIRouter(prefix="/share", tags=["share"])
 @router.post("/{file_id}/")
 async def create_share_link(
     file_id: int,
+    request: Request,
     expires_hours: int = Form(24),
     max_downloads: int = Form(1),
-    current_user: User = Depends(get_current_user),
 ):
+    user_id = get_current_user_id(request)
+    
     async with async_session_maker() as session:
         stmt = select(FileModel).where(
             FileModel.id == file_id, 
-            FileModel.owner == current_user.id
+            FileModel.owner == user_id
         )
         result = await session.execute(stmt)
         file = result.scalar_one_or_none()
@@ -36,7 +41,7 @@ async def create_share_link(
             )
 
         token = secrets.token_urlsafe(32)
-        expires_at = datetime.utcnow() + timedelta(hours=expires_hours)
+        expires_at = datetime.now() + timedelta(hours=expires_hours)
 
         share_link = ShareLink(
             token=token,
@@ -44,7 +49,7 @@ async def create_share_link(
             expires_at=expires_at,
             max_downloads=max_downloads,
             download_count=0,
-            created_at=datetime.utcnow()
+            created_at=datetime.now()
         )
 
         session.add(share_link)
@@ -69,7 +74,7 @@ async def download_shared_file(token: str):
         if not share_link:
             raise HTTPException(status_code=404, detail="Link not found")
 
-        if share_link.expires_at < datetime.utcnow():
+        if share_link.expires_at < datetime.now():
             raise HTTPException(status_code=410, detail="Link expired")
 
         if share_link.max_downloads > 0 and share_link.download_count >= share_link.max_downloads:

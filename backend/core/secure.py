@@ -69,4 +69,4 @@ def create_share_token():
 
 
 def calculate_expires_at(hours: int):
-    return datetime.utcnow() + timedelta(hours=hours)
+    return datetime.now() + timedelta(hours=hours)
