@@ -22,5 +22,11 @@ class File(Base):
 
     owner_user: Mapped["User"] = relationship("User", back_populates="files")
     
+    share_links: Mapped[list["ShareLink"]] = relationship(
+        "ShareLink", 
+        back_populates="file",
+        cascade="all, delete-orphan",  
+        passive_deletes=True
+    ) 
 
 

@@ -3,7 +3,7 @@ import uuid
 from pathlib import Path
 from typing import List
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, Request
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 
@@ -49,7 +49,6 @@ async def get_files_user(user: User = Depends(get_current_user)):
 
     return {"files": all_files, "count": len(all_files)}
 
-
 @router.get("/{file_id}/download")
 async def download_file(
     file_id: int,
@@ -74,6 +73,52 @@ async def download_file(
         path=file_path, filename=db_file.original_filename, media_type=db_file.type
     )
 
+
+@router.delete("/{file_id}")
+async def delete_file(
+    file_id: int,
+    user: User = Depends(get_current_user)
+):
+    async with async_session_maker() as session:
+        # Получаем файл
+        file = await session.get(FileModel, file_id)
+        
+        if not file:
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        if file.owner != user.id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # 1. Сначала удаляем все share_links для этого файла
+        from models.link import ShareLink
+        from sqlalchemy import delete
+        
+        delete_links_stmt = delete(ShareLink).where(ShareLink.file_id == file_id)
+        await session.execute(delete_links_stmt)
+        
+        # 2. Удаляем физический файл
+        import os
+        from pathlib import Path
+        
+        file_path = Path(file.path)
+        if file_path.exists():
+            try:
+                file_path.unlink()
+            except Exception as e:
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Failed to delete file from disk: {str(e)}"
+                )
+        
+        # 3. Удаляем запись файла из БД
+        await session.delete(file)
+        await session.commit()
+        
+        return {
+            "status": "success",
+            "message": "File and all associated share links deleted successfully",
+            "file_id": file_id
+        }
 
 @router.post("/upload/", response_model=None)
 async def create_file(

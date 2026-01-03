@@ -7,7 +7,12 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Разрешаем фронтенд
+    allow_origins=[
+        "http://127.0.0.1:5500", 
+        "http://localhost:5500",
+        "http://localhost:3000",
+        "http://localhost:8080",
+    ],  
     allow_credentials=True,
     allow_methods=["*"],  # Разрешаем все методы (GET, POST, OPTIONS, etc.)
     allow_headers=["*"],  # Разрешаем все заголовки

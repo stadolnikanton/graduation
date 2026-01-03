@@ -1,0 +1,149 @@
+:root {
+    --primary-color: #4361ee;
+    --secondary-color: #3f37c9;
+    --success-color: #4cc9f0;
+    --light-bg: #f8f9fa;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --card-radius: 12px;
+}
+
+body {
+    background-color: var(--light-bg);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+}
+
+/* Navigation */
+.navbar {
+    box-shadow: var(--shadow);
+}
+
+/* Cards */
+.card {
+    border-radius: var(--card-radius);
+    border: none;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    border-radius: var(--card-radius) var(--card-radius) 0 0 !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* File Cards */
+.file-card {
+    background: white;
+    border-left: 4px solid var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.file-card:hover {
+    background-color: #f8f9ff;
+    transform: translateX(5px);
+}
+
+.file-info {
+    flex: 1;
+}
+
+.file-actions {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.file-card:hover .file-actions {
+    opacity: 1;
+}
+
+/* Buttons */
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    transform: translateY(-1px);
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Form Controls */
+.form-control,
+.input-group-text {
+    border-radius: 8px;
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(67, 97, 238, 0.25);
+}
+
+.input-group-text {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+/* Loader */
+#loader {
+    min-height: 300px;
+}
+
+/* Toast */
+.toast {
+    border-radius: 8px;
+    border: none;
+    box-shadow: var(--shadow);
+}
+
+.toast-success {
+    background-color: #d4edda;
+    border-left: 4px solid #28a745;
+}
+
+.toast-error {
+    background-color: #f8d7da;
+    border-left: 4px solid #dc3545;
+}
+
+.toast-info {
+    background-color: #d1ecf1;
+    border-left: 4px solid #17a2b8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+
+    .file-actions {
+        opacity: 1;
+        margin-top: 10px;
+    }
+
+    .file-card {
+        padding: 15px !important;
+    }
+}

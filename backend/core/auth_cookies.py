@@ -10,7 +10,7 @@ ACCESS_TOKEN_MAX_AGE = 30 * 60
 REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60  
 HTTPONLY = True
 SECURE = False # В продакшене изменить на True, False только для локальной разработки
-SAME_SITE = "strict"
+SAME_SITE = "lax"
 COOKIE_PATH = "/"
 
 
