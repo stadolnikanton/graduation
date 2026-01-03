@@ -3,15 +3,17 @@ import uuid
 from pathlib import Path
 from typing import List
 
-from core.secure import verify_token
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, Request
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 
 from app.config import get_files_path
 from app.db import async_session_maker
-from core.deps import get_current_user_id
+
+from core.deps import get_current_user
+
 from models.file import File as FileModel
+from models.user import User
 
 
 router = APIRouter(prefix="/files", tags=["files"])
@@ -21,12 +23,11 @@ UPLOAD_DIR = get_files_path()
 
 
 @router.get("/")
-async def get_files_user(request: Request):
-    user_id = get_current_user_id(request)
+async def get_files_user(user: User = Depends(get_current_user)):
 
     async with async_session_maker() as session:
         result = await session.execute(
-            select(FileModel).where(FileModel.owner == user_id)
+            select(FileModel).where(FileModel.owner == user.id)
         )
         files = result.scalars().all()
 
@@ -52,9 +53,8 @@ async def get_files_user(request: Request):
 @router.get("/{file_id}/download")
 async def download_file(
     file_id: int,
-    request: Request
+    user: User = Depends(get_current_user)
 ):
-    user_id = get_current_user_id(request)
 
     async with async_session_maker() as session:
         result = await session.execute(select(FileModel).where(FileModel.id == file_id))
@@ -63,7 +63,7 @@ async def download_file(
         if not db_file:
             raise HTTPException(404, "Файл не найден")
 
-        if db_file.owner != user_id:
+        if db_file.owner != user.id:
             raise HTTPException(403, "Нет доступа к файлу")
 
     file_path = Path(db_file.path)
@@ -77,10 +77,9 @@ async def download_file(
 
 @router.post("/upload/", response_model=None)
 async def create_file(
-    request: Request,
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user)
 ):
-    user_id = get_current_user_id(request)
 
     
     file_extension = os.path.splitext(file.filename)[1]
@@ -94,7 +93,7 @@ async def create_file(
         "name": unique_filename,
         "original_filename": file.filename,
         "type": file.content_type,
-        "owner": user_id,
+        "owner": user.id,
         "path": str(file_path),
         "size": len(content),
     }
@@ -117,10 +116,9 @@ async def create_file(
 
 @router.post("/upload/multiple")
 async def create_files(
-    request: Request,
-    files: List[UploadFile] = File(...)
+    files: List[UploadFile] = File(...),
+    user: User = Depends(get_current_user)
 ):
-    user_id = get_current_user_id(request)
     
     results = []
     
@@ -138,7 +136,7 @@ async def create_files(
                 "name": unique_filename,
                 "original_filename": file.filename,
                 "type": file.content_type,
-                "owner": user_id,
+                "owner": user.id,
                 "path": str(file_path),
                 "size": len(content),
             }

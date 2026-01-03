@@ -5,14 +5,15 @@ from pathlib import Path
 
 from sqlalchemy.future import select
 
-from fastapi import APIRouter, Form, HTTPException, Response, Request
+from fastapi import APIRouter, Form, HTTPException, Depends
 from fastapi.responses import FileResponse
 
 from app.db import async_session_maker
-from core.deps import get_current_user_id
+from core.deps import get_current_user
 
 from models.file import File as FileModel
 from models.link import ShareLink
+from models.user import User
 
 router = APIRouter(prefix="/share", tags=["share"])
 
@@ -20,16 +21,15 @@ router = APIRouter(prefix="/share", tags=["share"])
 @router.post("/{file_id}/")
 async def create_share_link(
     file_id: int,
-    request: Request,
     expires_hours: int = Form(24),
     max_downloads: int = Form(1),
+    user: User = Depends(get_current_user)
 ):
-    user_id = get_current_user_id(request)
     
     async with async_session_maker() as session:
         stmt = select(FileModel).where(
             FileModel.id == file_id, 
-            FileModel.owner == user_id
+            FileModel.owner == user.id
         )
         result = await session.execute(stmt)
         file = result.scalar_one_or_none()

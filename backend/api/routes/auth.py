@@ -1,11 +1,13 @@
-import datetime
+import hashlib
+
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy import select
 
 from app.db import async_session_maker
 
-from core.deps import get_current_user, oauth2_scheme
+from core.deps import get_current_user, AuthCookies, get_auth_cookies
 from core.secure import (
     create_access_token,
     create_refresh_token,
@@ -13,16 +15,23 @@ from core.secure import (
     verify_password,
     verify_token,
 )
+from core.auth_cookies import delete_auth_cookies, set_auth_cookies
+
 from models.token import BlacklistedToken
 from models.user import User
-from schemas.token import LoginRequest, RefreshTokenRequest, Token
+
+from schemas.token import LoginRequest
 from schemas.user import UserCreate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=Token)
-async def register(user_data: UserCreate, response: Response):
+@router.post("/register")
+async def register(
+    user_data: UserCreate,
+    response: Response,
+    auth_cookies: AuthCookies = Depends(get_auth_cookies)
+    ):
     async with async_session_maker() as session:
         email_exists = await session.execute(
             select(User).where(User.email == user_data.email)
@@ -49,31 +58,20 @@ async def register(user_data: UserCreate, response: Response):
         access_token = create_access_token(data={"sub": str(user.id)})
         refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
-        response.set_cookie(
-            key="access_token",
-            value=access_token,
-            httponly=True,
-            max_age=30*60,
-            secure=False,
-            samesite="strict"
-        )
-
-        response.set_cookie(
-            key="refresh_token",
-            value=refresh_token,
-            httponly=True,
-            max_age=7*24*60*60,
-            secure=False,  # True в production с HTTPS
-            samesite="strict"
-        )
+        set_auth_cookies(response, access_token, refresh_token)
 
         return {
             "status": 200,
         }
+    
 
 
-@router.post("/login", response_model=Token)
-async def login(user_data: LoginRequest, response: Response):
+@router.post("/login")
+async def login(
+    user_data: LoginRequest,
+    response: Response,
+    auth_cookies: AuthCookies = Depends(get_auth_cookies)
+    ):
     async with async_session_maker() as session:
         result = await session.execute(
             select(User).where(User.email == user_data.email)
@@ -90,31 +88,19 @@ async def login(user_data: LoginRequest, response: Response):
         access_token = create_access_token(data={"sub": str(user.id)})
         refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
-        response.set_cookie(
-            key="access_token",
-            value=access_token,
-            httponly=True,
-            max_age=30*60,
-            secure=False,
-            samesite="strict"
-        )
-
-        response.set_cookie(
-            key="refresh_token",
-            value=refresh_token,
-            httponly=True,
-            max_age=7*24*60*60,
-            secure=False,  # True в production с HTTPS
-            samesite="strict"
-        )
+        set_auth_cookies(response, access_token, refresh_token)
 
         return {
             "status": 200,
         }
 
 
-@router.post("/refresh", response_model=Token)
-async def refresh(request: Request, response: Response):
+@router.post("/refresh")
+async def refresh(
+    request: Request, 
+    response: Response,
+    auth_cookies: AuthCookies = Depends(get_auth_cookies)
+):
     refresh_token = request.cookies.get("refresh_token")
 
     payload = verify_token(refresh_token)
@@ -137,23 +123,7 @@ async def refresh(request: Request, response: Response):
         access_token = create_access_token(data={"sub": str(user.id)})
         refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
-        response.set_cookie(
-            key="access_token",
-            value=access_token,
-            httponly=True,
-            max_age=30*60,
-            secure=False,
-            samesite="strict"
-        )
-
-        response.set_cookie(
-            key="refresh_token",
-            value=refresh_token,
-            httponly=True,
-            max_age=7*24*60*60,
-            secure=False,  # True в production с HTTPS
-            samesite="strict"
-        )
+        set_auth_cookies(response, access_token, refresh_token)
 
         return {
             "status": 200,
@@ -162,41 +132,36 @@ async def refresh(request: Request, response: Response):
 
 @router.post("/logout")
 async def logout(
+    request: Request,
     response: Response,
     current_user: User = Depends(get_current_user),
 ):
     async with async_session_maker() as session:
         
-        token = response.cookies.get("refresh_token")
-        
-        payload = verify_token(token)
+        refresh_token = request.cookies.get("refresh_token")
 
-        if not payload:
-            return {
-                "status": "success",
-                "message": "Token invalid or expired, considered logged out",
-            }
+        if refresh_token:
+            payload = verify_token(refresh_token)
 
-        jti = payload.get("jti")
-        exp = payload.get("exp")
+            if payload:
+                jti = payload.get("jti")
 
-        existing = await session.execute(
-            select(BlacklistedToken).where(BlacklistedToken.jti == jti)
-        )
-        if existing.scalar_one_or_none():
-            return {"status": "success", "message": "Already logged out"}
+                if jti is None:
+                    jti = hashlib.sha256(refresh_token.encode()).hexdigest()[:36]
+                    
+                token_type = payload.get("type", "refresh")
+                exp = payload.get("exp")
 
-        blacklisted_access = BlacklistedToken(
-            jti=jti,
-            user_id=current_user.id,
-            token_type="access",
-            expires_at=datetime.fromtimestamp(exp),
-            reason="logout",
-        )
-        session.add(blacklisted_access)
-        await session.commit()
+                blacklisted_token = BlacklistedToken(
+                    jti=jti,
+                    user_id=current_user.id,
+                    token_type=token_type,
+                    expires_at=datetime.fromtimestamp(exp),
+                    reason="logout",
+                )
+                session.add(blacklisted_token)
+                await session.commit()
 
-        response.delete_cookie("access_token")
-        response.delete_cookie("refresh_token")
+        delete_auth_cookies(response)
     
         return {"status": 200, "message": "Logged out successfully"}
