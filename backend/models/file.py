@@ -9,19 +9,15 @@ from app.db import Base
 
 from models.user import User
 
-
-class AccessLevel(enum.Enum):
-    READ = "read"
-    WRITE = "write"
-    MANAGE = "manage"
+from schemas.file import AccessLevel
 
 
 class File(Base):
     __tablename__ = "files"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
-    original_filename: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=False)
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False, unique=False)
     type: Mapped[str] = mapped_column(String(), nullable=False)
     owner: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
     path: Mapped[str] = mapped_column(String(), nullable=False)
@@ -39,18 +35,10 @@ class File(Base):
         passive_deletes=True
     )
 
-    shared_with: Mapped[list["FileShares"]] = relationship(
-        "FileShares", 
-        back_populates="file",
-        foreign_keys="FileShares.file_id",
-        cascade="all, delete-orphan",
-        passive_deletes=True
-    )
-    
-    shares_by_me: Mapped[list["FileShares"]] = relationship(
+    shares: Mapped[list["FileShares"]] = relationship(
         "FileShares",
-        back_populates="owner_user_rel",
-        foreign_keys="FileShares.owner_id"
+        cascade="all, delete-orphan",
+        lazy="selectin"  # или "joined"
     )
 
 
@@ -72,6 +60,6 @@ class FileShares(Base):
         nullable=False
     )
 
-    file: Mapped["File"] = relationship("File", back_populates="shared_with")
-    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
-    owner_user_rel: Mapped["User"] = relationship("User", foreign_keys=[owner_id])
+    file: Mapped["File"] = relationship("File")
+    owner_user: Mapped["User"] = relationship("User", foreign_keys=[owner_id])
+    shared_user: Mapped["User"] = relationship("User", foreign_keys=[user_id])

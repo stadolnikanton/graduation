@@ -5,13 +5,17 @@ from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+
 from sqlalchemy import select, delete
+from sqlalchemy.exc import IntegrityError
 
 
 from app.config import get_files_path
 from app.db import async_session_maker
 
 from core.deps import get_current_user
+
+from schemas.file import ShareRequest
 
 from models.file import FileShares, File as FileModel
 from models.user import User
@@ -85,7 +89,111 @@ async def get_files_user(user: User = Depends(get_current_user)):
     }
 
 
-# TODO: Добавить доступ к файлам другим пользователям
+@router.post("/{file_id}/share")
+async def grant_file_access(
+    data: ShareRequest,
+    file_id: int,
+    user: User = Depends(get_current_user),
+):
+    async with async_session_maker() as session:
+        result = await session.execute(select(FileModel).where(FileModel.id == file_id))
+        db_file = result.scalar_one_or_none()
+
+        if not db_file:
+            raise HTTPException(404, "Файл не найден")
+
+        if db_file.owner != user.id:
+            raise HTTPException(403, "Нет доступа к файлу")
+        
+        if data.user_id == user.id:
+            raise HTTPException(400, "Нельзя поделиться с самим собой")
+        
+        result = await session.execute(
+            select(User).where(User.id == data.user_id)
+        )
+        recipient = result.scalar_one_or_none()
+
+        if not recipient:
+            raise HTTPException(404, "Пользователь-получатель не найден")
+        
+        result = await session.execute(
+            select(FileShares).where(
+                FileShares.file_id == file_id,
+                FileShares.user_id == data.user_id
+            )
+        )
+        existing_share = result.scalar_one_or_none()
+        
+        if existing_share:
+            raise HTTPException(409, "Доступ уже предоставлен этому пользователю")
+        
+        try:
+            new_share = FileShares(
+                file_id=file_id,
+                user_id=data.user_id,
+                owner_id=user.id,
+                access_level=data.access_level
+            )
+            
+            session.add(new_share)
+            await session.commit()
+            await session.refresh(new_share)
+            
+            return {
+                "message": "Доступ успешно предоставлен",
+                "share_id": new_share.id,
+                "file_id": file_id,
+                "recipient_id": data.user_id,
+                "access_level": data.access_level
+            }
+            
+        except IntegrityError:
+            await session.rollback()
+            raise HTTPException(500, "Ошибка при предоставлении доступа")
+
+
+@router.delete("/{file_id}/share/{user_id}")
+async def remove_file_share(
+    file_id: int,
+    user_id: int,
+    user: User = Depends(get_current_user),
+):
+    async with async_session_maker() as session:
+        result = await session.execute(
+            select(FileModel).where(FileModel.id == file_id)
+        )
+        db_file = result.scalar_one_or_none()
+        
+        if not db_file:
+            raise HTTPException(404, "Файл не найден")
+        
+        if db_file.owner != user.id:
+            raise HTTPException(403, "Вы не владелец этого файла")
+        
+        if user_id == user.id:
+            raise HTTPException(400, "Нельзя удалить доступ самому себе")
+        
+        result = await session.execute(
+            select(FileShares).where(
+                FileShares.file_id == file_id,
+                FileShares.user_id == user_id
+            )
+        )
+        file_share = result.scalar_one_or_none()
+        
+        if not file_share:
+            raise HTTPException(404, "Доступ не найден")
+        
+        await session.delete(file_share)
+        await session.commit()
+        
+        return {
+            "message": "Доступ успешно удален",
+            "file_id": file_id,
+            "removed_user_id": user_id
+        }
+
+
 @router.get("/{file_id}/download")
 async def download_file(
     file_id: int,
@@ -149,36 +257,53 @@ async def delete_file(
             "file_id": file_id
         }
 
-# FIXME: Исправить ошибку загрузки одинаковых файлов
-@router.post("/upload/", response_model=None)
+
+@router.post("/upload/")
 async def create_file(
     file: UploadFile = File(...),
     user: User = Depends(get_current_user)
 ):
-
+    MAX_FILE_SIZE = 100 * 1024 * 1024
+    content = await file.read()
     
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(413, f"Файл слишком большой. Максимальный размер: {MAX_FILE_SIZE // (1024*1024)}MB")
+    
+    file_extension = os.path.splitext(file.filename)[1].lower()
+    
+
     file_extension = os.path.splitext(file.filename)[1]
     unique_filename = f"{uuid.uuid4()}{file_extension}"
     file_path = Path(UPLOAD_DIR) / unique_filename
-
-    content = await file.read()
-    file_path.write_bytes(content)
-
-    file_data = {
-        "name": unique_filename,
-        "original_filename": file.filename,
-        "type": file.content_type,
-        "owner": user.id,
-        "path": str(file_path),
-        "size": len(content),
-    }
-
+    
     async with async_session_maker() as session:
+        result = await session.execute(
+            select(FileModel).where(
+                FileModel.owner == user.id,
+                FileModel.original_filename == file.filename
+            )
+        )
+        existing_file = result.scalar_one_or_none()
+        
+        if existing_file:
+            raise HTTPException(409, f"Файл с именем '{file.filename}' уже существует у вас")
+        
+        file_path.write_bytes(content)
+        
+        file_data = {
+            "name": unique_filename,
+            "original_filename": file.filename,
+            "type": file.content_type or "application/octet-stream",
+            "owner": user.id,
+            "path": str(file_path),
+            "size": len(content),
+        }
+        
         db_file = FileModel(**file_data)
         session.add(db_file)
         await session.commit()
         await session.refresh(db_file)
-
+    
     return {
         "status": "success",
         "file_id": db_file.id,
@@ -194,23 +319,76 @@ async def create_files(
     files: List[UploadFile] = File(...),
     user: User = Depends(get_current_user)
 ):
+    MAX_TOTAL_SIZE = 500 * 1024 * 1024
+    MAX_FILE_SIZE = 100 * 1024 * 1024
     
+    total_size = 0
     results = []
     
     for file in files:
+        content = await file.read()
+        await file.seek(0) 
+
+        if len(content) > MAX_FILE_SIZE:
+            results.append({
+                "status": "error",
+                "filename": file.filename,
+                "error": f"Файл слишком большой. Максимум: {MAX_FILE_SIZE // (1024*1024)}MB"
+            })
+            continue
+        
+        total_size += len(content)
+        
+        file_extension = os.path.splitext(file.filename)[1].lower()
+
+    
+    if total_size > MAX_TOTAL_SIZE:
+        raise HTTPException(413, f"Общий размер файлов превышает {MAX_TOTAL_SIZE // (1024*1024)}MB")
+    
+    for file in files:
         try:
+            if any(r.get("filename") == file.filename and r["status"] == "error" for r in results):
+                continue
+            
+            content = await file.read()
             file_extension = os.path.splitext(file.filename)[1]
             unique_filename = f"{uuid.uuid4()}{file_extension}"
             file_path = Path(UPLOAD_DIR) / unique_filename
             
-
-            content = await file.read()
+            async with async_session_maker() as session:
+                result = await session.execute(
+                    select(FileModel).where(
+                        FileModel.owner == user.id,
+                        FileModel.original_filename == file.filename
+                    )
+                )
+                existing_file = result.scalar_one_or_none()
+                
+                if existing_file:
+                    base_name = os.path.splitext(file.filename)[0]
+                    counter = 1
+                    new_filename = f"{base_name} ({counter}){file_extension}"
+                    
+                    while True:
+                        result = await session.execute(
+                            select(FileModel).where(
+                                FileModel.owner == user.id,
+                                FileModel.original_filename == new_filename
+                            )
+                        )
+                        if not result.scalar_one_or_none():
+                            break
+                        counter += 1
+                        new_filename = f"{base_name} ({counter}){file_extension}"
+                    
+                    file.filename = new_filename
+            
             file_path.write_bytes(content)
             
             file_data = {
                 "name": unique_filename,
                 "original_filename": file.filename,
-                "type": file.content_type,
+                "type": file.content_type or "application/octet-stream",
                 "owner": user.id,
                 "path": str(file_path),
                 "size": len(content),
@@ -226,6 +404,7 @@ async def create_files(
                     "status": "success",
                     "file_id": db_file.id,
                     "filename": file.filename,
+                    "original_name": file.filename,
                     "saved_as": unique_filename,
                     "size": len(content),
                     "download_url": f"/files/{db_file.id}/download"

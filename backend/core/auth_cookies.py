@@ -3,14 +3,14 @@ import logging
 from fastapi import Response
 from typing import Optional, Dict, Any
 
-from app.config import (
-        HTTPONLY, 
-        ACCESS_TOKEN_MAX_AGE, 
-        REFRESH_TOKEN_MAX_AGE, 
-        SECURE,
-        SAME_SITE,
-        COOKIE_PATH
-)
+
+ACCESS_TOKEN_MAX_AGE: int = 30 * 60 
+REFRESH_TOKEN_MAX_AGE: int = 7 * 24 * 60 * 60  
+HTTPONLY: bool = True
+SECURE: bool = False # В продакшене изменить на True, False только для локальной 
+SAME_SITE: str = "lax"
+COOKIE_PATH: str = "/"
+
 
 logger = logging.getLogger(__name__)
 

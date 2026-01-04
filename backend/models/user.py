@@ -30,12 +30,12 @@ class User(Base):
         lazy="select",
         cascade="all, delete-orphan",
     )
-
-    shared_files: Mapped[list["FileShares"]] = relationship(
-    "FileShares", 
-    back_populates="user",
-    foreign_keys="FileShares.user_id"
-)
+    
+    shared_files_access = relationship(
+        "FileShares", 
+        foreign_keys="[FileShares.user_id]",
+        viewonly=True  # только для чтения
+    )
 
 
     def __repr__(self) -> str:

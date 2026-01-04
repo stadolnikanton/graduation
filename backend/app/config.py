@@ -18,12 +18,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     
-    ACCESS_TOKEN_MAX_AGE: int = 30 * 60 
-    REFRESH_TOKEN_MAX_AGE: int = 7 * 24 * 60 * 60  
-    HTTPONLY: bool = True
-    SECURE: bool = False # В продакшене изменить на True, False только для локальной разработки
-    SAME_SITE: str = "lax"
-    COOKIE_PATH: str = "/"
+
     
     model_config = SettingsConfigDict(
         env_file=os.path.join(
