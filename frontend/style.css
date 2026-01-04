@@ -1,0 +1,74 @@
+/* style.css (дополнительные стили) */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.file-icon.pdf {
+    color: #ff6b6b;
+}
+
+.file-icon.doc {
+    color: #4361ee;
+}
+
+.file-icon.xls {
+    color: #4caf50;
+}
+
+.file-icon.img {
+    color: #ff9800;
+}
+
+.file-icon.zip {
+    color: #9c27b0;
+}
+
+.file-icon.txt {
+    color: #607d8b;
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.shadow-lg {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+}
+
+.rotate {
+    animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

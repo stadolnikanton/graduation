@@ -1,0 +1,24 @@
+# .dockerignore для бэкенда
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.env
+*.env
+.vscode
+.idea
+*.log
+*.sqlite3
+static/
+uploads/
+tests/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.DS_Store
