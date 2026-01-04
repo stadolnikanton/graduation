@@ -13,7 +13,7 @@ from app.db import async_session_maker
 
 from core.deps import get_current_user
 
-from models.file import File as FileModel
+from models.file import FileShares, File as FileModel
 from models.user import User
 from models.link import ShareLink
 
@@ -26,30 +26,64 @@ UPLOAD_DIR = get_files_path()
 
 @router.get("/")
 async def get_files_user(user: User = Depends(get_current_user)):
-
     async with async_session_maker() as session:
+        # 1. Собственные файлы пользователя
         result = await session.execute(
-            select(FileModel).where(FileModel.owner == user.id)
+            select(FileModel)
+            .where(FileModel.owner == user.id)
+            .order_by(FileModel.created_at.desc())
         )
-        files = result.scalars().all()
+        owned_files_result = result.scalars().all()
+        
+        ownded_files = []
+        for file in owned_files_result:
+            ownded_files.append({
+                "id": file.id,
+                "name": file.name,
+                "original_filename": file.original_filename,
+                "type": file.type,
+                "size": file.size,
+                "created_at": file.created_at.isoformat() if file.created_at else None,
+                "download_url": f"/files/{file.id}/download",
+                "is_owner": True,
+                "shared_file": False
+            })
+        
+        # 2. Файлы, к которым пользователю предоставили доступ
+        result = await session.execute(
+            select(FileModel)
+            .join(FileShares, FileModel.id == FileShares.file_id)
+            .where(FileShares.user_id == user.id)
+            .order_by(FileShares.shared_at.desc())
+        )
+        shared_files_result = result.scalars().all()
+        
+        shared_files = []
+        for file in shared_files_result:
+            shared_files.append({
+                "id": file.id,
+                "name": file.name,
+                "original_filename": file.original_filename,
+                "type": file.type,
+                "size": file.size,
+                "created_at": file.created_at.isoformat() if file.created_at else None,
+                "download_url": f"/files/{file.id}/download",
+                "is_owner": False,
+                "shared_file": True
+            })
+    
+    return {
+        "files": {
+            "owned": ownded_files,
+            "shared": shared_files
+        },
+        "counts": {
+            "owned": len(ownded_files),
+            "shared": len(shared_files),
+            "total": len(ownded_files) + len(shared_files)
+        }
+    }
 
-        all_files = []
-        for file in files:
-            all_files.append(
-                {
-                    "id": file.id,
-                    "name": file.name,
-                    "original_filename": file.original_filename,
-                    "type": file.type,
-                    "size": file.size,
-                    "created_at": file.created_at.isoformat()
-                    if file.created_at
-                    else None,
-                    "download_url": f"/files/{file.id}/download",
-                }
-            )
-
-    return {"files": all_files, "count": len(all_files)}
 
 # TODO: Добавить доступ к файлам другим пользователям
 @router.get("/{file_id}/download")

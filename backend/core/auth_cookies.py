@@ -3,15 +3,17 @@ import logging
 from fastapi import Response
 from typing import Optional, Dict, Any
 
+from app.config import (
+        HTTPONLY, 
+        ACCESS_TOKEN_MAX_AGE, 
+        REFRESH_TOKEN_MAX_AGE, 
+        SECURE,
+        SAME_SITE,
+        COOKIE_PATH
+)
 
 logger = logging.getLogger(__name__)
 
-ACCESS_TOKEN_MAX_AGE = 30 * 60 
-REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60  
-HTTPONLY = True
-SECURE = False # В продакшене изменить на True, False только для локальной разработки
-SAME_SITE = "lax"
-COOKIE_PATH = "/"
 
 
 def set_auth_cookies(

@@ -31,6 +31,12 @@ class User(Base):
         cascade="all, delete-orphan",
     )
 
+    shared_files: Mapped[list["FileShares"]] = relationship(
+    "FileShares", 
+    back_populates="user",
+    foreign_keys="FileShares.user_id"
+)
+
 
     def __repr__(self) -> str:
         return f"User(id={self.id!r}, name={self.name!r}, fullname={self.email!r})"

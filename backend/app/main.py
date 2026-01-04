@@ -14,8 +14,8 @@ app.add_middleware(
         "http://localhost:8080",
     ],  
     allow_credentials=True,
-    allow_methods=["*"],  # Разрешаем все методы (GET, POST, OPTIONS, etc.)
-    allow_headers=["*"],  # Разрешаем все заголовки
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(auth.router)

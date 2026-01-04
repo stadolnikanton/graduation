@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from app.db import async_session_maker
 
+
 from models.user import User
 
 from core.secure import verify_token
@@ -13,7 +14,7 @@ from core.auth_cookies import set_auth_cookies, delete_auth_cookies, set_auth_co
 
 class AuthCookies:
     """Класс для удобного управления auth cookies через Depends"""
-    
+
     def __init__(self, response: Response):
         self.response = response
     
