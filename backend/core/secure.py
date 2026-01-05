@@ -4,14 +4,13 @@ from typing import Optional
 
 import jwt
 from passlib.context import CryptContext
-from passlib.hash import argon2
 
 from app.config import settings
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
 
     if expires_delta:
@@ -30,7 +29,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-def create_refresh_token(data: dict):
+def create_refresh_token(data: dict) -> str:
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(
         days=settings.REFRESH_TOKEN_EXPIRE_DAYS
@@ -64,7 +63,7 @@ def verify_token(token: str) -> Optional[dict]:
         return None
 
 
-def create_share_token():
+def create_share_token() -> str:
     return secrets.token_urlsafe(32)
 
 
