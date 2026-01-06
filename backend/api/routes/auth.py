@@ -30,7 +30,6 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register(
     user_data: UserCreate,
     response: Response,
-    auth_cookies: AuthCookies = Depends(get_auth_cookies)
     ):
     async with async_session_maker() as session:
         email_exists = await session.execute(
@@ -63,14 +62,12 @@ async def register(
         return {
             "status": 200,
         }
-    
 
 
 @router.post("/login")
 async def login(
     user_data: LoginRequest,
     response: Response,
-    auth_cookies: AuthCookies = Depends(get_auth_cookies)
     ):
     async with async_session_maker() as session:
         result = await session.execute(
@@ -99,7 +96,6 @@ async def login(
 async def refresh(
     request: Request, 
     response: Response,
-    auth_cookies: AuthCookies = Depends(get_auth_cookies)
 ):
     refresh_token = request.cookies.get("refresh_token")
 
@@ -165,8 +161,8 @@ async def logout(
         delete_auth_cookies(response)
     
         return {"status": 200, "message": "Logged out successfully"}
-
-
+    
+    
 @router.get("/me")
 async def get_current_user_info(
     current_user: User = Depends(get_current_user)

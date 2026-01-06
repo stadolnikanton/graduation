@@ -71,7 +71,7 @@ def get_auth_cookies(response: Response) -> AuthCookies:
 
 
 
-async def get_current_user(request: Request):
+async def get_current_user(request: Request) -> Dict:
     access_token = request.cookies.get("access_token")
 
     if not access_token:
