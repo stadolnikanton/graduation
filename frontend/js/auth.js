@@ -1,85 +1,114 @@
-// Login function
-async function login(event) {
-    event.preventDefault();
+const API_BASE = 'http://localhost:8000';
 
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-
-    // Basic validation
-    if (!email || !password) {
-        showToast('Please fill in all fields', 'error');
-        return;
-    }
-
-    try {
-        const response = await api.post("/auth/login", {
-            email,
-            password
-        });
-
-        showToast('Login successful!', 'success');
-        await showFiles();
-
-    } catch (err) {
-        const errorMsg = err.response?.data?.message || "Invalid email or password";
-        showToast(errorMsg, 'error');
-        console.error('Login error:', err);
-    }
+function showRegisterForm() {
+    document.getElementById('login-form').classList.add('d-none');
+    document.getElementById('register-form').classList.remove('d-none');
+    hideAlert();
 }
 
-// Register function
-async function register(event) {
-    event.preventDefault();
-
-    const name = document.getElementById('name').value;
-    const email = document.getElementById('reg-email').value;
-    const password = document.getElementById('reg-password').value;
-    const password_confirm = document.getElementById('password_confirm').value;
-
-    // Validation
-    if (!name || !email || !password || !password_confirm) {
-        showToast('Please fill in all fields', 'error');
-        return;
-    }
-
-    if (password !== password_confirm) {
-        showToast('Passwords do not match', 'error');
-        return;
-    }
-
-    if (password.length < 6) {
-        showToast('Password must be at least 6 characters', 'error');
-        return;
-    }
-
-    try {
-        const response = await api.post("/auth/register", {
-            name,
-            email,
-            password,
-            password_confirm
-        });
-
-        showToast('Registration successful! Please login.', 'success');
-        showLogin();
-
-    } catch (err) {
-        const errorMsg = err.response?.data?.message || "Registration failed";
-        showToast(errorMsg, 'error');
-        console.error('Registration error:', err);
-    }
+function showLoginForm() {
+    document.getElementById('register-form').classList.add('d-none');
+    document.getElementById('login-form').classList.remove('d-none');
+    hideAlert();
 }
 
-// Logout function
-async function logout() {
-    if (!confirm('Are you sure you want to logout?')) return;
+function showAlert(message, type = 'danger') {
+    const alertDiv = document.getElementById('auth-alert');
+    alertDiv.textContent = message;
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.classList.remove('d-none');
+}
+
+function hideAlert() {
+    document.getElementById('auth-alert').classList.add('d-none');
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
 
     try {
-        await api.post("/auth/logout");
-        showToast('Logged out successfully', 'success');
-        showLogin();
-    } catch (err) {
-        showToast('Error logging out', 'error');
-        console.error('Logout error:', err);
+        const response = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                email: email,
+                password: password
+            })
+        });
+
+        if (response.ok) {
+            localStorage.setItem('isAuthenticated', 'true');
+            window.location.href = 'dashboard.html';
+        } else {
+            const error = await response.json();
+            showAlert(error.detail || 'Ошибка входа');
+        }
+    } catch (error) {
+        showAlert('Ошибка соединения с сервером');
     }
+});
+
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const name = document.getElementById('register-name').value;
+    const email = document.getElementById('register-email').value;
+    const password = document.getElementById('register-password').value;
+    const passwordConfirm = document.getElementById('register-password-confirm').value;
+
+    if (password !== passwordConfirm) {
+        showAlert('Пароли не совпадают');
+        return;
+    }
+
+    if (password.length < 8 || password.length > 50) {
+        showAlert('Пароль должен быть от 8 до 50 символов');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/auth/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                email: email,
+                password: password,
+                password_confirm: passwordConfirm
+            })
+        });
+
+        if (response.ok) {
+            showAlert('Регистрация успешна! Теперь вы можете войти.', 'success');
+            setTimeout(() => {
+                showLoginForm();
+                document.getElementById('login-email').value = email;
+            }, 2000);
+        } else {
+            const error = await response.json();
+            if (error.detail) {
+                if (Array.isArray(error.detail)) {
+                    showAlert(error.detail.map(err => err.msg).join(', '));
+                } else {
+                    showAlert(error.detail);
+                }
+            } else {
+                showAlert('Ошибка регистрации');
+            }
+        }
+    } catch (error) {
+        showAlert('Ошибка соединения с сервером');
+    }
+});
+
+if (localStorage.getItem('isAuthenticated') === 'true') {
+    window.location.href = 'dashboard.html';
 }

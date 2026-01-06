@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FileCloud - Панель управления</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">FileCloud</div>
+        <nav class="nav flex-column">
+            <a class="nav-link active" href="#" onclick="showSection('files', event)">
+                <i class="bi bi-folder"></i>
+                <span>Мои файлы</span>
+            </a>
+            <a class="nav-link" href="#" onclick="showSection('upload', event)">
+                <i class="bi bi-cloud-upload"></i>
+                <span>Загрузить</span>
+            </a>
+            <a class="nav-link" href="#" onclick="showSection('shared', event)">
+                <i class="bi bi-share"></i>
+                <span>Общий доступ</span>
+            </a>
+            <a class="nav-link" href="#" onclick="showSection('links', event)">
+                <i class="bi bi-link-45deg"></i>
+                <span>Ссылки</span>
+            </a>
+            <a class="nav-link" href="#" onclick="showSection('profile', event)">
+                <i class="bi bi-person-circle"></i>
+                <span>Профиль</span>
+            </a>
+            <div class="mt-auto">
+                <button class="btn btn-outline-light w-100" onclick="logout()">
+                    <i class="bi bi-box-arrow-left me-2"></i>
+                    <span>Выйти</span>
+                </button>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Toast Notifications -->
+        <div class="toast-container"></div>
+
+        <!-- Files Section -->
+        <div id="files-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-folder me-2"></i>Мои файлы</h2>
+                <button class="btn btn-primary" onclick="showSection('upload', event)">
+                    <i class="bi bi-plus-circle me-2"></i>Загрузить файл
+                </button>
+            </div>
+
+            <!-- Stats -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="stats-card">
+                        <h5>Всего файлов</h5>
+                        <h2 id="total-files">0</h2>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stats-card" style="background: linear-gradient(135deg, #4cc9f0 0%, #4361ee 100%);">
+                        <h5>Мои файлы</h5>
+                        <h2 id="owned-files">0</h2>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stats-card" style="background: linear-gradient(135deg, #7209b7 0%, #4361ee 100%);">
+                        <h5>Доступ к файлам</h5>
+                        <h2 id="shared-files">0</h2>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Files Tabs -->
+            <ul class="nav nav-tabs mb-4">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#" onclick="showFilesTab('owned', event)">Мои файлы</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showFilesTab('shared', event)">Доступные мне</a>
+                </li>
+            </ul>
+
+            <!-- Files List -->
+            <div id="files-list">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div id="upload-section" class="d-none">
+            <h2 class="mb-4"><i class="bi bi-cloud-upload me-2"></i>Загрузка файлов</h2>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-4">
+                        <label class="form-label">Выберите файлы для загрузки</label>
+                        <input type="file" class="form-control" id="file-input" multiple>
+                        <div class="form-text">Максимальный размер файла: 100MB</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Прогресс загрузки</label>
+                        <div class="progress" style="height: 25px;">
+                            <div id="upload-progress" class="progress-bar progress-bar-striped progress-bar-animated"
+                                role="progressbar" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" onclick="uploadFiles()">
+                            <i class="bi bi-upload me-2"></i>Загрузить файлы
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="showSection('files', event)">
+                            <i class="bi bi-arrow-left me-2"></i>Назад
+                        </button>
+                    </div>
+
+                    <!-- Upload Results -->
+                    <div id="upload-results" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shared Section -->
+        <div id="shared-section" class="d-none">
+            <h2 class="mb-4"><i class="bi bi-share me-2"></i>Общий доступ к файлам</h2>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Предоставить доступ</h5>
+
+                    <div class="mb-3">
+                        <label class="form-label">Выберите файл</label>
+                        <select class="form-select" id="share-file-select" onchange="loadSharedUsers()">
+                            <option value="">Загрузка файлов...</option>
+                        </select>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">ID пользователя</label>
+                            <input type="number" class="form-control" id="share-user-id"
+                                placeholder="Введите ID пользователя">
+                            <div class="form-text">Укажите ID пользователя, которому предоставляется доступ</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Уровень доступа</label>
+                            <select class="form-select" id="share-access-level">
+                                <option value="read">Только чтение</option>
+                                <option value="write">Чтение и запись</option>
+                                <option value="manage">Полный доступ</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" onclick="shareFile()">
+                            <i class="bi bi-share me-2"></i>Предоставить доступ
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="showSection('files', event)">
+                            <i class="bi bi-arrow-left me-2"></i>Назад
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Пользователи с доступом</h5>
+                    <div id="shared-users-list">
+                        <div class="text-center text-muted py-3">
+                            Выберите файл для просмотра списка пользователей
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Links Section -->
+        <div id="links-section" class="d-none">
+            <h2 class="mb-4"><i class="bi bi-link-45deg me-2"></i>Публичные ссылки</h2>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Выберите файл для создания ссылки</label>
+                        <select class="form-select" id="link-file-select">
+                            <option value="">Загрузка файлов...</option>
+                        </select>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Срок действия (часов)</label>
+                            <input type="number" class="form-control" id="link-expires" value="24" min="1" max="720">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Лимит скачиваний</label>
+                            <input type="number" class="form-control" id="link-max-downloads" value="1" min="1">
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" onclick="createShareLink()">
+                            <i class="bi bi-link me-2"></i>Создать ссылку
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="showSection('files', event)">
+                            <i class="bi bi-arrow-left me-2"></i>Назад
+                        </button>
+                    </div>
+
+                    <!-- Active Links -->
+                    <div class="mt-4" id="active-links"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Section -->
+        <div id="profile-section" class="d-none">
+            <h2 class="mb-4"><i class="bi bi-person-circle me-2"></i>Мой профиль</h2>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <div class="user-avatar d-inline-flex mb-3">
+                            <span id="user-initials">U</span>
+                        </div>
+                        <h4 id="user-name">Загрузка...</h4>
+                        <p class="text-muted" id="user-email"></p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Текущая сессия</label>
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Сессия действительна до обновления токена
+                        </div>
+                    </div>
+
+                    <button class="btn btn-outline-danger w-100" onclick="logout()">
+                        <i class="bi bi-box-arrow-left me-2"></i>Выйти из системы
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Actions Modal -->
+        <div class="modal fade" id="fileModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="fileModalTitle">Действия с файлом</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="fileModalContent">
+                            <div class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Загрузка...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+
+</html>
