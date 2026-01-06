@@ -245,15 +245,28 @@ async def download_file(
         if not db_file:
             raise HTTPException(404, "Файл не найден")
 
-        if db_file.owner != user.id:
+        if db_file.owner == user.id:
             raise HTTPException(403, "Нет доступа к файлу")
+        else:
+            result = await session.execute(
+                select(FileShares).where(
+                    FileShares.file_id == file_id,
+                    FileShares.user_id == user.id
+                )
+            )
+            access_file = result.scalar_one_or_none()
+            
+            if not access_file:
+                raise HTTPException(403, "Нет доступа к файлу")
 
     file_path = Path(db_file.path)
     if not file_path.exists():
         raise HTTPException(404, "Файл отсутствует на сервере")
 
     return FileResponse(
-        path=file_path, filename=db_file.original_filename, media_type=db_file.type
+        path=file_path, 
+        filename=db_file.original_filename, 
+        media_type=db_file.type
     )
 
 
