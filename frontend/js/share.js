@@ -1,9 +1,8 @@
 const API_BASE = 'http://localhost:8000';
 
 function getTokenFromUrl() {
-    const path = window.location.pathname;
-    const parts = path.split('/');
-    return parts[parts.length - 1] || null;
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('token') || null;
 }
 
 async function loadShareInfo() {
@@ -35,13 +34,16 @@ function displayFileInfo(data) {
     document.getElementById('share-info').classList.add('d-none');
     document.getElementById('share-content').classList.remove('d-none');
 
-    document.getElementById('file-name').textContent = data.file.original_filename;
+    document.getElementById('file-name').textContent = data.file.original_filename || data.file.filename;
     document.getElementById('file-size').textContent = formatFileSize(data.file.size);
-    document.getElementById('file-expires').textContent =
-        `Действует до: ${new Date(data.expires_at).toLocaleString()}`;
+
+    if (data.expires_at) {
+        document.getElementById('file-expires').textContent =
+            `Действует до: ${new Date(data.expires_at).toLocaleString()}`;
+    }
 
     if (data.max_downloads > 0) {
-        const downloadsLeft = data.max_downloads - data.downloads_count;
+        const downloadsLeft = data.max_downloads - (data.downloads_count || 0);
         document.getElementById('downloads-left').textContent =
             `Осталось скачиваний: ${downloadsLeft}`;
 
@@ -56,7 +58,7 @@ async function downloadSharedFile() {
     if (!token) return;
 
     try {
-        const response = await fetch(`${API_BASE}/share/${token}/download`, {
+        const response = await fetch(`${API_BASE}/share/${token}`, {
             credentials: 'include'
         });
 
@@ -65,14 +67,24 @@ async function downloadSharedFile() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = response.headers.get('X-Filename') || 'file';
+
+            // Получаем имя файла из заголовков или из ответа
+            const filename = response.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1]
+                || response.headers.get('X-Filename')
+                || 'file';
+
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
+
+            // Обновляем информацию после скачивания
             setTimeout(() => loadShareInfo(), 1000);
         } else if (response.status === 410) {
             showExpired();
+        } else if (response.status === 404) {
+            showError('Ссылка не найдена');
         } else {
             showError('Ошибка скачивания файла');
         }
@@ -93,7 +105,6 @@ function showMaxDownloadsReached() {
     document.getElementById('max-downloads-message').classList.remove('d-none');
 }
 
-
 function showError(message) {
     document.getElementById('share-info').classList.add('d-none');
     document.getElementById('share-content').classList.remove('d-none');
@@ -101,7 +112,6 @@ function showError(message) {
     document.getElementById('error-message').classList.remove('d-none');
     document.getElementById('error-text').textContent = message;
 }
-
 
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';

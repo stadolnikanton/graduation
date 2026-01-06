@@ -67,13 +67,17 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
         return;
     }
 
+    if (password.length < 8 || password.length > 50) {
+        showAlert('Пароль должен быть от 8 до 50 символов');
+        return;
+    }
+
     try {
         const response = await fetch(`${API_BASE}/auth/register`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            credentials: 'include',
             body: JSON.stringify({
                 name: name,
                 email: email,
@@ -85,14 +89,20 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
         if (response.ok) {
             showAlert('Регистрация успешна! Теперь вы можете войти.', 'success');
             setTimeout(() => {
-                localStorage.setItem('isAuthenticated', 'true'); // После успешной регистрации переходит в приложение
-                window.location.href = 'dashboard.html'; // После успешной регистрации переходит в приложение
-                // showLoginForm(); После успешной регистрации показывает формлу логина
-                // document.getElementById('login-email').value = email;
+                showLoginForm();
+                document.getElementById('login-email').value = email;
             }, 2000);
         } else {
             const error = await response.json();
-            showAlert(error.detail || 'Ошибка регистрации');
+            if (error.detail) {
+                if (Array.isArray(error.detail)) {
+                    showAlert(error.detail.map(err => err.msg).join(', '));
+                } else {
+                    showAlert(error.detail);
+                }
+            } else {
+                showAlert('Ошибка регистрации');
+            }
         }
     } catch (error) {
         showAlert('Ошибка соединения с сервером');

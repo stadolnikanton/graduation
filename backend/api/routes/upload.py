@@ -152,6 +152,44 @@ async def grant_file_access(
             raise HTTPException(500, "Ошибка при предоставлении доступа")
 
 
+@router.get("/{file_id}/shared-users")
+async def get_shared_users(
+        file_id: int, 
+        current_user: User = Depends(get_current_user)
+):
+    async with async_session_maker() as session:
+        result = await session.execute(
+            select(FileShares.user_id, FileShares.access_level)
+            .where(FileShares.file_id == file_id)
+        )
+        shared_records = result.all()
+        
+        if not shared_records:
+            return []
+        
+        user_ids = [record.user_id for record in shared_records]
+        
+        users_result = await session.execute(
+            select(User).where(User.id.in_(user_ids))
+        )
+        users = users_result.scalars().all()
+
+        users_dict = {user.id: user for user in users}
+        
+        response = []
+        for record in shared_records:
+            user = users_dict.get(record.user_id)
+            if user:
+                response.append({
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "access_level": record.access_level
+                })
+        
+        return response
+
+
 @router.delete("/{file_id}/share/{user_id}")
 async def remove_file_share(
     file_id: int,
@@ -258,7 +296,7 @@ async def delete_file(
         }
 
 
-@router.post("/upload/")
+@router.post("/upload")
 async def create_file(
     file: UploadFile = File(...),
     user: User = Depends(get_current_user)

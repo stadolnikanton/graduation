@@ -64,17 +64,28 @@ async function loadFiles() {
 function updateStats() {
     if (filesData) {
         document.getElementById('total-files').textContent =
-            filesData.counts.total;
+            filesData.counts?.total || 0;
         document.getElementById('owned-files').textContent =
-            filesData.counts.owned;
+            filesData.counts?.owned || 0;
         document.getElementById('shared-files').textContent =
-            filesData.counts.shared;
+            filesData.counts?.shared || 0;
     }
 }
 
 function renderFiles() {
     const filesList = document.getElementById('files-list');
-    const files = currentFileTab === 'owned' ? filesData.files.owned : filesData.files.shared;
+
+    // Проверяем структуру данных
+    let files = [];
+    if (filesData) {
+        if (currentFileTab === 'owned' && filesData.files?.owned) {
+            files = filesData.files.owned;
+        } else if (currentFileTab === 'shared' && filesData.files?.shared) {
+            files = filesData.files.shared;
+        } else if (filesData.files) {
+            files = filesData.files; // Если структура отличается
+        }
+    }
 
     if (files.length === 0) {
         filesList.innerHTML = `
@@ -94,12 +105,12 @@ function renderFiles() {
                         <i class="bi bi-file-earmark file-icon"></i>
                     </div>
                     <div class="col">
-                        <h5 class="mb-1">${file.original_filename}</h5>
+                        <h5 class="mb-1">${file.original_filename || file.filename || file.name}</h5>
                         <p class="text-muted mb-1">
                             ${formatFileSize(file.size)} • 
-                            ${new Date(file.created_at).toLocaleDateString()}
+                            ${new Date(file.created_at || file.uploaded_at).toLocaleDateString()}
                         </p>
-                        ${file.shared_file ?
+                        ${file.shared_file || file.is_shared ?
             '<span class="badge bg-primary">Доступ</span>' :
             '<span class="badge bg-success">Владелец</span>'
         }
@@ -141,16 +152,24 @@ function showSection(sectionId, event = null) {
     }
     if (sectionId === 'files') {
         loadFiles();
-    } else if (sectionId === 'shared') {
-        loadShareData();
+    } else if (sectionId === 'upload') {
+        // Reset upload form
+        document.getElementById('file-input').value = '';
+        document.getElementById('upload-progress').style.width = '0%';
+        document.getElementById('upload-results').innerHTML = '';
     } else if (sectionId === 'links') {
         loadLinksData();
     } else if (sectionId === 'profile') {
         loadUserProfile();
+    } else if (sectionId === 'shared') {
+        loadShareData();
     }
 }
+
 async function loadShareData() {
     const select = document.getElementById('share-file-select');
+    if (!select) return; // Если секция sharing не существует
+
     select.innerHTML = '<option value="">Загрузка файлов...</option>';
 
     try {
@@ -160,18 +179,30 @@ async function loadShareData() {
 
         if (response.ok) {
             const data = await response.json();
-            select.innerHTML = data.files.owned.map(file =>
-                `<option value="${file.id}">${file.original_filename}</option>`
+            const ownedFiles = data.files?.owned || data.files || [];
+            select.innerHTML = ownedFiles.map(file =>
+                `<option value="${file.id}">${file.original_filename || file.filename}</option>`
             ).join('');
-            await loadSharedUsers();
+            if (ownedFiles.length > 0) {
+                await loadSharedUsers(ownedFiles[0].id);
+            } else {
+                document.getElementById('shared-users-list').innerHTML = `
+                    <div class="text-center text-muted py-3">
+                        У вас нет файлов для предоставления доступа
+                    </div>
+                `;
+            }
         }
     } catch (error) {
         console.error('Failed to load files for sharing:', error);
     }
 }
-async function loadSharedUsers() {
-    const fileId = document.getElementById('share-file-select').value;
-    if (!fileId) {
+
+async function loadSharedUsers(fileId = null) {
+    const fileSelect = document.getElementById('share-file-select');
+    const fileIdToUse = fileId || fileSelect.value;
+
+    if (!fileIdToUse) {
         document.getElementById('shared-users-list').innerHTML = `
             <div class="text-center text-muted py-3">
                 Выберите файл для просмотра списка пользователей
@@ -181,7 +212,7 @@ async function loadSharedUsers() {
     }
 
     try {
-        const response = await fetch(`${API_BASE}/files/${fileId}/shared-users`, {
+        const response = await fetch(`${API_BASE}/files/${fileIdToUse}/shared-users`, {
             credentials: 'include'
         });
 
@@ -202,11 +233,11 @@ async function loadSharedUsers() {
             sharedUsersList.innerHTML = users.map(user => `
                 <div class="d-flex justify-content-between align-items-center mb-2 p-2 border-bottom">
                     <div>
-                        <strong>${user.name}</strong>
+                        <strong>${user.name || user.username}</strong>
                         <div class="text-muted small">${user.email}</div>
                         <span class="badge bg-info">${getAccessLevelLabel(user.access_level)}</span>
                     </div>
-                    <button class="btn btn-sm btn-outline-danger" onclick="revokeAccess(${fileId}, ${user.id})">
+                    <button class="btn btn-sm btn-outline-danger" onclick="revokeAccess(${fileIdToUse}, ${user.id})">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
@@ -222,6 +253,7 @@ async function loadSharedUsers() {
         console.error('Failed to load shared users:', error);
     }
 }
+
 function getAccessLevelLabel(level) {
     const labels = {
         'read': 'Только чтение',
@@ -230,6 +262,7 @@ function getAccessLevelLabel(level) {
     };
     return labels[level] || level;
 }
+
 async function revokeAccess(fileId, userId) {
     if (!confirm('Вы уверены, что хотите отозвать доступ?')) return;
 
@@ -241,7 +274,7 @@ async function revokeAccess(fileId, userId) {
 
         if (response.ok) {
             showToast('Доступ успешно отозван', 'success');
-            await loadSharedUsers();
+            await loadSharedUsers(fileId);
         } else {
             const error = await response.json();
             showToast(error.detail || 'Ошибка отзыва доступа', 'danger');
@@ -250,6 +283,7 @@ async function revokeAccess(fileId, userId) {
         showToast('Ошибка соединения', 'danger');
     }
 }
+
 async function shareFile() {
     const fileId = document.getElementById('share-file-select').value;
     const userId = document.getElementById('share-user-id').value;
@@ -259,6 +293,7 @@ async function shareFile() {
         showToast('Заполните все поля', 'warning');
         return;
     }
+
     try {
         const response = await fetch(`${API_BASE}/files/${fileId}/share`, {
             method: 'POST',
@@ -275,15 +310,16 @@ async function shareFile() {
         if (response.ok) {
             showToast('Доступ успешно предоставлен', 'success');
             document.getElementById('share-user-id').value = '';
-            await loadSharedUsers();
+            await loadSharedUsers(fileId);
         } else {
             const error = await response.json();
-            showToast(error.detail || 'Ошибка', 'danger');
+            showToast(error.detail || 'Ошибка предоставления доступа', 'danger');
         }
     } catch (error) {
         showToast('Ошибка соединения', 'danger');
     }
 }
+
 async function loadLinksData() {
     const select = document.getElementById('link-file-select');
     select.innerHTML = '<option value="">Загрузка файлов...</option>';
@@ -295,14 +331,16 @@ async function loadLinksData() {
 
         if (response.ok) {
             const data = await response.json();
-            select.innerHTML = data.files.owned.map(file =>
-                `<option value="${file.id}">${file.original_filename}</option>`
+            const ownedFiles = data.files?.owned || data.files || [];
+            select.innerHTML = ownedFiles.map(file =>
+                `<option value="${file.id}">${file.original_filename || file.filename}</option>`
             ).join('');
         }
     } catch (error) {
         console.error('Failed to load files for links:', error);
     }
 }
+
 async function createShareLink() {
     const fileId = document.getElementById('link-file-select').value;
     const expiresHours = document.getElementById('link-expires').value;
@@ -313,14 +351,17 @@ async function createShareLink() {
         return;
     }
 
-    const formData = new FormData();
+    const formData = new URLSearchParams();
     formData.append('expires_hours', expiresHours);
     formData.append('max_downloads', maxDownloads);
 
     try {
-        const response = await fetch(`${API_BASE}/share/${fileId}/`, {
+        const response = await fetch(`${API_BASE}/share/${fileId}`, {
             method: 'POST',
             credentials: 'include',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
             body: formData
         });
 
@@ -332,8 +373,8 @@ async function createShareLink() {
                 <div class="alert alert-success">
                     <h6>Новая ссылка:</h6>
                     <p class="mb-2">
-                        <a href="${API_BASE}/share/${data.token}" target="_blank">
-                            ${API_BASE}/share/${data.token}
+                        <a href="${window.location.origin}/share.html?token=${data.token}" target="_blank">
+                            ${window.location.origin}/share.html?token=${data.token}
                         </a>
                     </p>
                     <small class="text-muted">
@@ -349,6 +390,7 @@ async function createShareLink() {
         showToast('Ошибка соединения', 'danger');
     }
 }
+
 async function uploadFiles() {
     const fileInput = document.getElementById('file-input');
     const files = fileInput.files;
@@ -362,18 +404,21 @@ async function uploadFiles() {
     const resultsDiv = document.getElementById('upload-results');
     progressBar.style.width = '0%';
     resultsDiv.innerHTML = '';
+
+    // Проверка размера файлов
     for (let file of files) {
         if (file.size > 100 * 1024 * 1024) {
             showToast(`Файл ${file.name} превышает 100MB`, 'danger');
             return;
         }
     }
+
     if (files.length === 1) {
         const formData = new FormData();
         formData.append('file', files[0]);
 
         try {
-            const response = await fetch(`${API_BASE}/files/upload/`, {
+            const response = await fetch(`${API_BASE}/files/upload`, {
                 method: 'POST',
                 credentials: 'include',
                 body: formData
@@ -386,7 +431,7 @@ async function uploadFiles() {
                 showToast('Файл успешно загружен!', 'success');
                 resultsDiv.innerHTML = `
                     <div class="alert alert-success">
-                        <h6>${result.filename}</h6>
+                        <h6>${result.filename || result.name}</h6>
                         <p class="mb-0">Размер: ${formatFileSize(result.size)}</p>
                     </div>
                 `;
@@ -398,8 +443,7 @@ async function uploadFiles() {
         } catch (error) {
             showToast('Ошибка соединения', 'danger');
         }
-    }
-    else {
+    } else {
         const formData = new FormData();
         for (let file of files) {
             formData.append('files', file);
@@ -416,17 +460,19 @@ async function uploadFiles() {
 
             if (response.ok) {
                 const result = await response.json();
-                showToast(`Загружено ${result.successful} из ${result.total_files} файлов`, 'success');
+                showToast(`Загружено ${result.successful || result.count} из ${result.total_files || files.length} файлов`, 'success');
 
-                resultsDiv.innerHTML = result.files.map(file => `
-                    <div class="alert alert-${file.status === 'success' ? 'success' : 'danger'}">
-                        <h6>${file.filename}</h6>
-                        ${file.status === 'success' ?
-                        `<p class="mb-0">Размер: ${formatFileSize(file.size)}</p>` :
-                        `<p class="mb-0">Ошибка: ${file.error}</p>`
-                    }
-                    </div>
-                `).join('');
+                if (result.files) {
+                    resultsDiv.innerHTML = result.files.map(file => `
+                        <div class="alert alert-${file.status === 'success' ? 'success' : 'danger'}">
+                            <h6>${file.filename || file.name}</h6>
+                            ${file.status === 'success' ?
+                            `<p class="mb-0">Размер: ${formatFileSize(file.size)}</p>` :
+                            `<p class="mb-0">Ошибка: ${file.error || 'Неизвестная ошибка'}</p>`
+                        }
+                        </div>
+                    `).join('');
+                }
 
                 await loadFiles();
             } else {
@@ -439,23 +485,25 @@ async function uploadFiles() {
     }
     fileInput.value = '';
 }
+
 function downloadFile(fileId) {
     window.open(`${API_BASE}/files/${fileId}/download`, '_blank');
 }
+
 function openFileActions(fileId) {
     const file = findFileById(fileId);
     if (!file) return;
 
     const modal = new bootstrap.Modal(document.getElementById('fileModal'));
-    document.getElementById('fileModalTitle').textContent = file.original_filename;
+    document.getElementById('fileModalTitle').textContent = file.original_filename || file.filename;
 
-    const isOwner = file.is_owner;
+    const isOwner = !file.shared_file && !file.is_shared;
 
     let content = `
         <div class="mb-3">
-            <p><strong>Имя файла:</strong> ${file.original_filename}</p>
+            <p><strong>Имя файла:</strong> ${file.original_filename || file.filename}</p>
             <p><strong>Размер:</strong> ${formatFileSize(file.size)}</p>
-            <p><strong>Дата создания:</strong> ${new Date(file.created_at).toLocaleString()}</p>
+            <p><strong>Дата создания:</strong> ${new Date(file.created_at || file.uploaded_at).toLocaleString()}</p>
             <p><strong>Статус:</strong> ${isOwner ? 'Владелец' : 'Доступ предоставлен'}</p>
         </div>
         
@@ -478,6 +526,7 @@ function openFileActions(fileId) {
     document.getElementById('fileModalContent').innerHTML = content;
     modal.show();
 }
+
 async function deleteFile(fileId) {
     if (!confirm('Вы уверены, что хотите удалить этот файл?')) return;
 
@@ -499,10 +548,19 @@ async function deleteFile(fileId) {
         showToast('Ошибка соединения', 'danger');
     }
 }
+
 function findFileById(fileId) {
-    const allFiles = [...filesData.files.owned, ...filesData.files.shared];
+    if (!filesData) return null;
+
+    // Ищем во всех файлах
+    const allFiles = [
+        ...(filesData.files?.owned || []),
+        ...(filesData.files?.shared || []),
+        ...(filesData.files || [])
+    ];
     return allFiles.find(file => file.id === fileId);
 }
+
 async function logout() {
     try {
         await fetch(`${API_BASE}/auth/logout`, {
@@ -516,8 +574,11 @@ async function logout() {
         console.error('Logout error:', error);
     }
 }
+
 function showToast(message, type = 'info') {
     const container = document.querySelector('.toast-container');
+    if (!container) return;
+
     const toastId = 'toast-' + Date.now();
 
     const toast = document.createElement('div');
@@ -548,6 +609,7 @@ function showToast(message, type = 'info') {
         toast.remove();
     });
 }
+
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -555,6 +617,8 @@ function formatFileSize(bytes) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
+
+// Auto-refresh token every 25 minutes
 setInterval(async () => {
     try {
         await fetch(`${API_BASE}/auth/refresh`, {

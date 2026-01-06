@@ -25,6 +25,10 @@
                 <i class="bi bi-cloud-upload"></i>
                 <span>Загрузить</span>
             </a>
+            <a class="nav-link" href="#" onclick="showSection('shared', event)">
+                <i class="bi bi-share"></i>
+                <span>Общий доступ</span>
+            </a>
             <a class="nav-link" href="#" onclick="showSection('links', event)">
                 <i class="bi bi-link-45deg"></i>
                 <span>Ссылки</span>
@@ -133,6 +137,60 @@
             </div>
         </div>
 
+        <!-- Shared Section -->
+        <div id="shared-section" class="d-none">
+            <h2 class="mb-4"><i class="bi bi-share me-2"></i>Общий доступ к файлам</h2>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Предоставить доступ</h5>
+
+                    <div class="mb-3">
+                        <label class="form-label">Выберите файл</label>
+                        <select class="form-select" id="share-file-select" onchange="loadSharedUsers()">
+                            <option value="">Загрузка файлов...</option>
+                        </select>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">ID пользователя</label>
+                            <input type="number" class="form-control" id="share-user-id"
+                                placeholder="Введите ID пользователя">
+                            <div class="form-text">Укажите ID пользователя, которому предоставляется доступ</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Уровень доступа</label>
+                            <select class="form-select" id="share-access-level">
+                                <option value="read">Только чтение</option>
+                                <option value="write">Чтение и запись</option>
+                                <option value="manage">Полный доступ</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" onclick="shareFile()">
+                            <i class="bi bi-share me-2"></i>Предоставить доступ
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="showSection('files', event)">
+                            <i class="bi bi-arrow-left me-2"></i>Назад
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Пользователи с доступом</h5>
+                    <div id="shared-users-list">
+                        <div class="text-center text-muted py-3">
+                            Выберите файл для просмотра списка пользователей
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Links Section -->
         <div id="links-section" class="d-none">
