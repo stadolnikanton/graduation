@@ -1,3 +1,4 @@
+<!-- share.html -->
 <!DOCTYPE html>
 <html lang="ru">
 
@@ -8,157 +9,63 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-color: #4361ee;
-            --secondary-color: #3a0ca3;
-        }
-
-        * {
-            font-family: 'Inter', sans-serif;
-        }
-
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .card {
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            border: none;
-            max-width: 500px;
-            width: 100%;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
-            border: none;
-            padding: 12px 30px;
-            font-weight: 600;
-        }
-
-        .file-icon {
-            font-size: 4rem;
-            color: #4361ee;
-        }
-
-        .logo {
-            font-weight: 700;
-            font-size: 2rem;
-            background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-    </style>
+    <link rel="stylesheet" href="css/auth.css">
 </head>
 
 <body>
-    <div class="card p-4">
-        <div class="card-body text-center">
-            <h1 class="logo mb-4">FileCloud</h1>
+    <div class="container share-container">
+        <div class="card p-4">
+            <div class="card-body text-center">
+                <h1 class="logo mb-4">FileCloud</h1>
 
-            <div id="loading">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Загрузка...</span>
-                </div>
-                <p class="mt-3">Загрузка информации о файле...</p>
-            </div>
-
-            <div id="file-info" class="d-none">
-                <i class="bi bi-file-earmark file-icon mb-3"></i>
-                <h4 id="file-name">Файл</h4>
-                <p class="text-muted" id="file-details"></p>
-
-                <div id="success-message" class="d-none">
-                    <div class="alert alert-success">
-                        <i class="bi bi-check-circle me-2"></i>
-                        Ссылка действительна
+                <div id="share-info" class="mb-4">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
                     </div>
-                    <button class="btn btn-primary btn-lg w-100" onclick="downloadFile()">
-                        <i class="bi bi-download me-2"></i>Скачать файл
-                    </button>
+                    <p>Загрузка информации о файле...</p>
                 </div>
 
-                <div id="error-message" class="d-none">
-                    <div class="alert alert-danger">
+                <div id="share-content" class="d-none">
+                    <div class="mb-4">
+                        <i class="bi bi-file-earmark" style="font-size: 4rem; color: #4361ee;"></i>
+                        <h3 id="file-name" class="mt-3"></h3>
+                        <p class="text-muted" id="file-size"></p>
+                        <p class="text-muted" id="file-expires"></p>
+                    </div>
+
+                    <div id="download-section">
+                        <button class="btn btn-primary btn-lg" onclick="downloadSharedFile()">
+                            <i class="bi bi-download me-2"></i>Скачать файл
+                        </button>
+                        <p class="text-muted mt-2" id="downloads-left"></p>
+                    </div>
+
+                    <div id="expired-message" class="alert alert-warning d-none">
                         <i class="bi bi-exclamation-triangle me-2"></i>
+                        Срок действия ссылки истек
+                    </div>
+
+                    <div id="max-downloads-message" class="alert alert-danger d-none">
+                        <i class="bi bi-x-circle me-2"></i>
+                        Лимит скачиваний исчерпан
+                    </div>
+
+                    <div id="error-message" class="alert alert-danger d-none">
+                        <i class="bi bi-x-circle me-2"></i>
                         <span id="error-text"></span>
                     </div>
-                    <a href="/" class="btn btn-outline-primary">
-                        <i class="bi bi-arrow-left me-2"></i>На главную
+                </div>
+
+                <div class="mt-4">
+                    <a href="/" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Вернуться на главную
                     </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        const API_BASE = 'http://localhost:8000';
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const token = window.location.pathname.split('/').pop();
-            checkShareLink(token);
-        });
-
-        async function checkShareLink(token) {
-            try {
-                const response = await fetch(`${API_BASE}/share/${token}`);
-
-                if (response.status === 200) {
-                    // Получаем информацию о файле из заголовков
-                    const filename = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'file';
-                    const size = response.headers.get('Content-Length') || 'Неизвестно';
-
-                    document.getElementById('file-name').textContent = decodeURIComponent(filename);
-                    document.getElementById('file-details').textContent = `Размер: ${formatFileSize(size)}`;
-                    document.getElementById('success-message').classList.remove('d-none');
-                    document.getElementById('error-message').classList.add('d-none');
-
-                    // Сохраняем информацию для скачивания
-                    window.currentToken = token;
-                    window.currentFilename = filename;
-                } else {
-                    showError('Ссылка недействительна или срок её действия истёк');
-                }
-            } catch (error) {
-                if (error.response && error.response.status === 404) {
-                    showError('Файл не найден');
-                } else if (error.response && error.response.status === 410) {
-                    showError('Ссылка устарела или достигнут лимит скачиваний');
-                } else {
-                    showError('Ошибка загрузки файла');
-                }
-            } finally {
-                document.getElementById('loading').classList.add('d-none');
-                document.getElementById('file-info').classList.remove('d-none');
-            }
-        }
-
-        function downloadFile() {
-            window.open(`${API_BASE}/share/${window.currentToken}`, '_blank');
-        }
-
-        function showError(message) {
-            document.getElementById('error-text').textContent = message;
-            document.getElementById('error-message').classList.remove('d-none');
-            document.getElementById('success-message').classList.add('d-none');
-        }
-
-        function formatFileSize(bytes) {
-            if (!bytes || bytes === 'Неизвестно') return 'Неизвестно';
-            bytes = parseInt(bytes);
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-    </script>
+    <script src="js/share.js"></script>
 </body>
 
 </html>

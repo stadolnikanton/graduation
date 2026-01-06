@@ -1,4 +1,3 @@
-# frontend/Dockerfile
 FROM nginx:alpine
 
 # Копирование файлов фронтенда

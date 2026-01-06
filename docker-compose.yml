@@ -42,7 +42,7 @@ services:
       - ./backend:/app
       - uploads_volume:/app/static
     ports:
-      - "8000:8000"  # Изменено с 8000 на 8001
+      - "8000:8000"
     networks:
       - filecloud_network
     command: >
@@ -55,7 +55,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "8080:80"  # Изменено с 80 на 8080
+      - "8080:80"
     networks:
       - filecloud_network
 
