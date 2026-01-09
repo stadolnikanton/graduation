@@ -1,5 +1,7 @@
-from pydantic import BaseModel
 from enum import Enum
+
+from pydantic import BaseModel, ConfigDict
+
 
 class FileId(BaseModel):
     id: int
@@ -13,8 +15,7 @@ class FileResponseSchema(BaseModel):
     size: int
     download_url: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ShareRequest(BaseModel):
