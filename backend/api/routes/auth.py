@@ -1,19 +1,21 @@
 import hashlib
-
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Response, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select
 
 from app.db import async_session_maker
-
-from core.deps import get_current_user
-from core.secure import create_access_token, create_refresh_token, get_password_hash, verify_password, verify_token
 from core.auth_cookies import delete_auth_cookies, set_auth_cookies
-
+from core.deps import get_current_user
+from core.secure import (
+    create_access_token,
+    create_refresh_token,
+    get_password_hash,
+    verify_password,
+    verify_token,
+)
 from models.token import BlacklistedToken
 from models.user import User
-
 from schemas.token import LoginRequest
 from schemas.user import UserCreate
 
@@ -127,7 +129,6 @@ async def logout(
     current_user: User = Depends(get_current_user),
 ):
     async with async_session_maker() as session:
-
         refresh_token = request.cookies.get("refresh_token")
 
         if refresh_token:
@@ -137,8 +138,7 @@ async def logout(
                 jti = payload.get("jti")
 
                 if jti is None:
-                    jti = hashlib.sha256(
-                        refresh_token.encode()).hexdigest()[:36]
+                    jti = hashlib.sha256(refresh_token.encode()).hexdigest()[:36]
 
                 token_type = payload.get("type", "refresh")
                 exp = payload.get("exp")
@@ -159,12 +159,12 @@ async def logout(
 
 
 @router.get("/me")
-async def get_current_user_info(
-    current_user: User = Depends(get_current_user)
-):
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return {
         "id": current_user.id,
         "name": current_user.name,
         "email": current_user.email,
-        "created_at": current_user.created_at.isoformat() if current_user.created_at else None
+        "created_at": current_user.created_at.isoformat()
+        if current_user.created_at
+        else None,
     }
