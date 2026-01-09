@@ -25,10 +25,10 @@ async def create_share_link(
     max_downloads: int = Form(1),
     user: User = Depends(get_current_user)
 ):
-    
+
     async with async_session_maker() as session:
         stmt = select(FileModel).where(
-            FileModel.id == file_id, 
+            FileModel.id == file_id,
             FileModel.owner == user.id
         )
         result = await session.execute(stmt)
@@ -36,7 +36,7 @@ async def create_share_link(
 
         if not file:
             raise HTTPException(
-                status_code=404, 
+                status_code=404,
                 detail="File not found or access denied"
             )
 
@@ -55,7 +55,7 @@ async def create_share_link(
         session.add(share_link)
         await session.commit()
         await session.refresh(share_link)
-        
+
         return {
             "share_url": f"/share/{token}",
             "expires_at": expires_at.isoformat(),
@@ -67,21 +67,23 @@ async def create_share_link(
 @router.get("/{token}/info")
 async def get_shared_info(token: str):
     async with async_session_maker() as session:
-        stmt = select(ShareLink, FileModel).join(FileModel, ShareLink.file_id == FileModel.id).where(ShareLink.token == token)
+        stmt = select(ShareLink, FileModel).join(
+            FileModel, ShareLink.file_id == FileModel.id).where(ShareLink.token == token)
         result = await session.execute(stmt)
         result_data = result.first()
-        
+
         if not result_data:
             raise HTTPException(status_code=404, detail="Link not found")
-        
+
         share_link, file = result_data
-        
+
         if share_link.expires_at and share_link.expires_at < datetime.now():
             raise HTTPException(status_code=410, detail="Link has expired")
-        
+
         if share_link.max_downloads and share_link.download_count >= share_link.max_downloads:
-            raise HTTPException(status_code=410, detail="Download limit reached")
-        
+            raise HTTPException(
+                status_code=410, detail="Download limit reached")
+
         return {
             "token": share_link.token,
             "file": {
@@ -96,7 +98,7 @@ async def get_shared_info(token: str):
             "created_at": share_link.created_at.isoformat() if share_link.created_at else None,
             "is_expired": share_link.expires_at and share_link.expires_at < datetime.now(),
             "downloads_left": (
-                share_link.max_downloads - share_link.download_count 
+                share_link.max_downloads - share_link.download_count
                 if share_link.max_downloads else None
             )
         }
@@ -116,7 +118,8 @@ async def download_shared_file(token: str):
             raise HTTPException(status_code=410, detail="Link expired")
 
         if share_link.max_downloads >= 1 and share_link.download_count >= share_link.max_downloads:
-            raise HTTPException(status_code=410, detail="Download limit reached")
+            raise HTTPException(
+                status_code=410, detail="Download limit reached")
 
         file_stmt = select(FileModel).where(FileModel.id == share_link.file_id)
         file_result = await session.execute(file_stmt)
@@ -130,7 +133,8 @@ async def download_shared_file(token: str):
 
         file_path = Path(file.path)
         if not file_path.exists():
-            raise HTTPException(status_code=404, detail="File not found on server")
+            raise HTTPException(
+                status_code=404, detail="File not found on server")
 
         return FileResponse(
             path=file_path,

@@ -4,10 +4,10 @@ from fastapi import Response
 from typing import Optional, Dict, Any
 
 
-ACCESS_TOKEN_MAX_AGE: int = 30 * 60 
-REFRESH_TOKEN_MAX_AGE: int = 7 * 24 * 60 * 60  
+ACCESS_TOKEN_MAX_AGE: int = 30 * 60
+REFRESH_TOKEN_MAX_AGE: int = 7 * 24 * 60 * 60
 HTTPONLY: bool = True
-SECURE: bool = False # В продакшене изменить на True, False только для локальной 
+SECURE: bool = False  # В продакшене изменить на True, False только для локальной
 SAME_SITE: str = "lax"
 COOKIE_PATH: str = "/"
 
@@ -15,16 +15,15 @@ COOKIE_PATH: str = "/"
 logger = logging.getLogger(__name__)
 
 
-
 def set_auth_cookies(
     response: Response,
     access_token: str,
     refresh_token: str,
-    secure: Optional[bool] = None,
+    secure: bool | None = None,
     path: str = COOKIE_PATH
 ) -> None:
     use_secure = secure if secure is not None else SECURE
-    
+
     response.set_cookie(
         key="access_token",
         value=access_token,
@@ -34,7 +33,7 @@ def set_auth_cookies(
         samesite=SAME_SITE,
         path=path,
     )
-    
+
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
@@ -44,14 +43,17 @@ def set_auth_cookies(
         samesite=SAME_SITE,
         path=path,
     )
-    
+
     logger.debug(f"Auth cookies set for path: {path}")
 
 
-def delete_auth_cookies(response: Response, path: str = COOKIE_PATH) -> None:
+def delete_auth_cookies(
+        response: Response,
+        path: str = COOKIE_PATH
+) -> None:
     response.delete_cookie(key="access_token", path=path)
     response.delete_cookie(key="refresh_token", path=path)
-    
+
     logger.debug(f"Auth cookies deleted for path: {path}")
 
 
@@ -62,9 +64,9 @@ def set_auth_cookies_with_user_data(
     user_data: Dict[str, Any],
     secure: Optional[bool] = None,
     path: str = COOKIE_PATH
-    ) -> None:
+) -> None:
     set_auth_cookies(response, access_token, refresh_token, secure, path)
-    
+
     if "username" in user_data:
         response.set_cookie(
             key="user_name",
@@ -75,7 +77,7 @@ def set_auth_cookies_with_user_data(
             samesite=SAME_SITE,
             path=path,
         )
-    
+
     if "user_id" in user_data:
         response.set_cookie(
             key="user_id",
@@ -86,5 +88,6 @@ def set_auth_cookies_with_user_data(
             samesite=SAME_SITE,
             path=path,
         )
-    
-    logger.debug(f"Auth cookies with user data set for user: {user_data.get('user_id')}")
+
+    logger.debug(
+        f"Auth cookies with user data set for user: {user_data.get('user_id')}")

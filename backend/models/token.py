@@ -22,7 +22,8 @@ class BlacklistedToken(Base):
     reason: Mapped[str] = mapped_column(Text, nullable=True)
     owner_jwt: Mapped["User"] = relationship(
         "User", 
-        back_populates="blacklisted_tokens"
+        back_populates="blacklisted_tokens",
+        overlaps="blacklisted_tokens"
     )
 
     def __repr__(self) -> str:

@@ -27,7 +27,6 @@ router = APIRouter(prefix="/files", tags=["files"])
 UPLOAD_DIR = get_files_path()
 
 
-
 @router.get("/")
 async def get_files_user(user: User = Depends(get_current_user)):
     async with async_session_maker() as session:
@@ -38,7 +37,7 @@ async def get_files_user(user: User = Depends(get_current_user)):
             .order_by(FileModel.created_at.desc())
         )
         owned_files_result = result.scalars().all()
-        
+
         ownded_files = []
         for file in owned_files_result:
             ownded_files.append({
@@ -52,7 +51,7 @@ async def get_files_user(user: User = Depends(get_current_user)):
                 "is_owner": True,
                 "shared_file": False
             })
-        
+
         # 2. Файлы, к которым пользователю предоставили доступ
         result = await session.execute(
             select(FileModel)
@@ -61,7 +60,7 @@ async def get_files_user(user: User = Depends(get_current_user)):
             .order_by(FileShares.shared_at.desc())
         )
         shared_files_result = result.scalars().all()
-        
+
         shared_files = []
         for file in shared_files_result:
             shared_files.append({
@@ -75,7 +74,7 @@ async def get_files_user(user: User = Depends(get_current_user)):
                 "is_owner": False,
                 "shared_file": True
             })
-    
+
     return {
         "files": {
             "owned": ownded_files,
@@ -104,10 +103,10 @@ async def grant_file_access(
 
         if db_file.owner != user.id:
             raise HTTPException(403, "Нет доступа к файлу")
-        
+
         if data.user_id == user.id:
             raise HTTPException(400, "Нельзя поделиться с самим собой")
-        
+
         result = await session.execute(
             select(User).where(User.id == data.user_id)
         )
@@ -115,7 +114,7 @@ async def grant_file_access(
 
         if not recipient:
             raise HTTPException(404, "Пользователь-получатель не найден")
-        
+
         result = await session.execute(
             select(FileShares).where(
                 FileShares.file_id == file_id,
@@ -123,10 +122,11 @@ async def grant_file_access(
             )
         )
         existing_share = result.scalar_one_or_none()
-        
+
         if existing_share:
-            raise HTTPException(409, "Доступ уже предоставлен этому пользователю")
-        
+            raise HTTPException(
+                409, "Доступ уже предоставлен этому пользователю")
+
         try:
             new_share = FileShares(
                 file_id=file_id,
@@ -134,11 +134,11 @@ async def grant_file_access(
                 owner_id=user.id,
                 access_level=data.access_level
             )
-            
+
             session.add(new_share)
             await session.commit()
             await session.refresh(new_share)
-            
+
             return {
                 "message": "Доступ успешно предоставлен",
                 "share_id": new_share.id,
@@ -146,7 +146,7 @@ async def grant_file_access(
                 "recipient_id": data.user_id,
                 "access_level": data.access_level
             }
-            
+
         except IntegrityError:
             await session.rollback()
             raise HTTPException(500, "Ошибка при предоставлении доступа")
@@ -154,7 +154,7 @@ async def grant_file_access(
 
 @router.get("/{file_id}/shared-users")
 async def get_shared_users(
-        file_id: int, 
+        file_id: int,
         current_user: User = Depends(get_current_user)
 ):
     async with async_session_maker() as session:
@@ -163,19 +163,19 @@ async def get_shared_users(
             .where(FileShares.file_id == file_id)
         )
         shared_records = result.all()
-        
+
         if not shared_records:
             return []
-        
+
         user_ids = [record.user_id for record in shared_records]
-        
+
         users_result = await session.execute(
             select(User).where(User.id.in_(user_ids))
         )
         users = users_result.scalars().all()
 
         users_dict = {user.id: user for user in users}
-        
+
         response = []
         for record in shared_records:
             user = users_dict.get(record.user_id)
@@ -186,7 +186,7 @@ async def get_shared_users(
                     "email": user.email,
                     "access_level": record.access_level
                 })
-        
+
         return response
 
 
@@ -201,16 +201,16 @@ async def remove_file_share(
             select(FileModel).where(FileModel.id == file_id)
         )
         db_file = result.scalar_one_or_none()
-        
+
         if not db_file:
             raise HTTPException(404, "Файл не найден")
-        
+
         if db_file.owner != user.id:
             raise HTTPException(403, "Вы не владелец этого файла")
-        
+
         if user_id == user.id:
             raise HTTPException(400, "Нельзя удалить доступ самому себе")
-        
+
         result = await session.execute(
             select(FileShares).where(
                 FileShares.file_id == file_id,
@@ -218,13 +218,13 @@ async def remove_file_share(
             )
         )
         file_share = result.scalar_one_or_none()
-        
+
         if not file_share:
             raise HTTPException(404, "Доступ не найден")
-        
+
         await session.delete(file_share)
         await session.commit()
-        
+
         return {
             "message": "Доступ успешно удален",
             "file_id": file_id,
@@ -255,7 +255,7 @@ async def download_file(
                 )
             )
             access_file = result.scalar_one_or_none()
-            
+
             if not access_file:
                 raise HTTPException(403, "Нет доступа к файлу")
 
@@ -264,8 +264,8 @@ async def download_file(
         raise HTTPException(404, "Файл отсутствует на сервере")
 
     return FileResponse(
-        path=file_path, 
-        filename=db_file.original_filename, 
+        path=file_path,
+        filename=db_file.original_filename,
         media_type=db_file.type
     )
 
@@ -277,31 +277,30 @@ async def delete_file(
 ):
     async with async_session_maker() as session:
         file = await session.get(FileModel, file_id)
-        
+
         if not file:
             raise HTTPException(status_code=404, detail="File not found")
-        
+
         if file.owner != user.id:
             raise HTTPException(status_code=403, detail="Access denied")
-        
-        
-        delete_links_stmt = delete(ShareLink).where(ShareLink.file_id == file_id)
+
+        delete_links_stmt = delete(ShareLink).where(
+            ShareLink.file_id == file_id)
         await session.execute(delete_links_stmt)
-        
-        
+
         file_path = Path(file.path)
         if file_path.exists():
             try:
                 file_path.unlink()
             except Exception as e:
                 raise HTTPException(
-                    status_code=500, 
+                    status_code=500,
                     detail=f"Failed to delete file from disk: {str(e)}"
                 )
-        
+
         await session.delete(file)
         await session.commit()
-        
+
         return {
             "status": "success",
             "message": "File and all associated share links deleted successfully",
@@ -316,17 +315,17 @@ async def create_file(
 ):
     MAX_FILE_SIZE = 100 * 1024 * 1024
     content = await file.read()
-    
+
     if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(413, f"Файл слишком большой. Максимальный размер: {MAX_FILE_SIZE // (1024*1024)}MB")
-    
+        raise HTTPException(
+            413, f"Файл слишком большой. Максимальный размер: {MAX_FILE_SIZE // (1024*1024)}MB")
+
     file_extension = os.path.splitext(file.filename)[1].lower()
-    
 
     file_extension = os.path.splitext(file.filename)[1]
     unique_filename = f"{uuid.uuid4()}{file_extension}"
     file_path = Path(UPLOAD_DIR) / unique_filename
-    
+
     async with async_session_maker() as session:
         result = await session.execute(
             select(FileModel).where(
@@ -335,12 +334,13 @@ async def create_file(
             )
         )
         existing_file = result.scalar_one_or_none()
-        
+
         if existing_file:
-            raise HTTPException(409, f"Файл с именем '{file.filename}' уже существует у вас")
-        
+            raise HTTPException(
+                409, f"Файл с именем '{file.filename}' уже существует у вас")
+
         file_path.write_bytes(content)
-        
+
         file_data = {
             "name": unique_filename,
             "original_filename": file.filename,
@@ -349,12 +349,12 @@ async def create_file(
             "path": str(file_path),
             "size": len(content),
         }
-        
+
         db_file = FileModel(**file_data)
         session.add(db_file)
         await session.commit()
         await session.refresh(db_file)
-    
+
     return {
         "status": "success",
         "file_id": db_file.id,
@@ -372,13 +372,13 @@ async def create_files(
 ):
     MAX_TOTAL_SIZE = 500 * 1024 * 1024
     MAX_FILE_SIZE = 100 * 1024 * 1024
-    
+
     total_size = 0
     results = []
-    
+
     for file in files:
         content = await file.read()
-        await file.seek(0) 
+        await file.seek(0)
 
         if len(content) > MAX_FILE_SIZE:
             results.append({
@@ -387,25 +387,25 @@ async def create_files(
                 "error": f"Файл слишком большой. Максимум: {MAX_FILE_SIZE // (1024*1024)}MB"
             })
             continue
-        
+
         total_size += len(content)
-        
+
         file_extension = os.path.splitext(file.filename)[1].lower()
 
-    
     if total_size > MAX_TOTAL_SIZE:
-        raise HTTPException(413, f"Общий размер файлов превышает {MAX_TOTAL_SIZE // (1024*1024)}MB")
-    
+        raise HTTPException(
+            413, f"Общий размер файлов превышает {MAX_TOTAL_SIZE // (1024*1024)}MB")
+
     for file in files:
         try:
             if any(r.get("filename") == file.filename and r["status"] == "error" for r in results):
                 continue
-            
+
             content = await file.read()
             file_extension = os.path.splitext(file.filename)[1]
             unique_filename = f"{uuid.uuid4()}{file_extension}"
             file_path = Path(UPLOAD_DIR) / unique_filename
-            
+
             async with async_session_maker() as session:
                 result = await session.execute(
                     select(FileModel).where(
@@ -414,12 +414,12 @@ async def create_files(
                     )
                 )
                 existing_file = result.scalar_one_or_none()
-                
+
                 if existing_file:
                     base_name = os.path.splitext(file.filename)[0]
                     counter = 1
                     new_filename = f"{base_name} ({counter}){file_extension}"
-                    
+
                     while True:
                         result = await session.execute(
                             select(FileModel).where(
@@ -431,11 +431,11 @@ async def create_files(
                             break
                         counter += 1
                         new_filename = f"{base_name} ({counter}){file_extension}"
-                    
+
                     file.filename = new_filename
-            
+
             file_path.write_bytes(content)
-            
+
             file_data = {
                 "name": unique_filename,
                 "original_filename": file.filename,
@@ -444,13 +444,13 @@ async def create_files(
                 "path": str(file_path),
                 "size": len(content),
             }
-            
+
             async with async_session_maker() as session:
                 db_file = FileModel(**file_data)
                 session.add(db_file)
                 await session.commit()
                 await session.refresh(db_file)
-                
+
                 results.append({
                     "status": "success",
                     "file_id": db_file.id,
@@ -460,14 +460,14 @@ async def create_files(
                     "size": len(content),
                     "download_url": f"/files/{db_file.id}/download"
                 })
-                
+
         except Exception as e:
             results.append({
                 "status": "error",
                 "filename": file.filename,
                 "error": str(e)
             })
-    
+
     return {
         "total_files": len(files),
         "successful": len([r for r in results if r["status"] == "success"]),

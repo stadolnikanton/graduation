@@ -1,5 +1,3 @@
-import enum
-
 from datetime import datetime, timezone
 
 from sqlalchemy import BigInteger, ForeignKey, Integer, String, Enum
@@ -31,12 +29,14 @@ class File(Base):
     share_links: Mapped[list["ShareLink"]] = relationship(
         "ShareLink", 
         back_populates="file",
+        overlaps="file",
         cascade="all, delete-orphan",  
         passive_deletes=True
     )
 
     shares: Mapped[list["FileShares"]] = relationship(
         "FileShares",
+        back_populates="file",
         cascade="all, delete-orphan",
         lazy="selectin"  # или "joined"
     )
@@ -60,6 +60,6 @@ class FileShares(Base):
         nullable=False
     )
 
-    file: Mapped["File"] = relationship("File")
+    file: Mapped["File"] = relationship("File", back_populates="shares")
     owner_user: Mapped["User"] = relationship("User", foreign_keys=[owner_id])
     shared_user: Mapped["User"] = relationship("User", foreign_keys=[user_id])

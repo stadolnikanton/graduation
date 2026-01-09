@@ -17,4 +17,4 @@ class ShareLink(Base):
     download_count: Mapped[int] = mapped_column(default=0)
     created_at: Mapped[datetime] = mapped_column(default=datetime.now(timezone.utc))
 
-    file: Mapped["File"] = relationship("File", back_populates="share_links")
+    file: Mapped["File"] = relationship("File", back_populates="share_links", overlaps="share_links")

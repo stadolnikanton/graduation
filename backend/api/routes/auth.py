@@ -7,14 +7,8 @@ from sqlalchemy import select
 
 from app.db import async_session_maker
 
-from core.deps import get_current_user, AuthCookies, get_auth_cookies
-from core.secure import (
-    create_access_token,
-    create_refresh_token,
-    get_password_hash,
-    verify_password,
-    verify_token,
-)
+from core.deps import get_current_user
+from core.secure import create_access_token, create_refresh_token, get_password_hash, verify_password, verify_token
 from core.auth_cookies import delete_auth_cookies, set_auth_cookies
 
 from models.token import BlacklistedToken
@@ -30,7 +24,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register(
     user_data: UserCreate,
     response: Response,
-    ):
+):
     async with async_session_maker() as session:
         email_exists = await session.execute(
             select(User).where(User.email == user_data.email)
@@ -68,7 +62,7 @@ async def register(
 async def login(
     user_data: LoginRequest,
     response: Response,
-    ):
+):
     async with async_session_maker() as session:
         result = await session.execute(
             select(User).where(User.email == user_data.email)
@@ -94,7 +88,7 @@ async def login(
 
 @router.post("/refresh")
 async def refresh(
-    request: Request, 
+    request: Request,
     response: Response,
 ):
     refresh_token = request.cookies.get("refresh_token")
@@ -133,7 +127,7 @@ async def logout(
     current_user: User = Depends(get_current_user),
 ):
     async with async_session_maker() as session:
-        
+
         refresh_token = request.cookies.get("refresh_token")
 
         if refresh_token:
@@ -143,8 +137,9 @@ async def logout(
                 jti = payload.get("jti")
 
                 if jti is None:
-                    jti = hashlib.sha256(refresh_token.encode()).hexdigest()[:36]
-                    
+                    jti = hashlib.sha256(
+                        refresh_token.encode()).hexdigest()[:36]
+
                 token_type = payload.get("type", "refresh")
                 exp = payload.get("exp")
 
@@ -159,10 +154,10 @@ async def logout(
                 await session.commit()
 
         delete_auth_cookies(response)
-    
+
         return {"status": 200, "message": "Logged out successfully"}
-    
-    
+
+
 @router.get("/me")
 async def get_current_user_info(
     current_user: User = Depends(get_current_user)

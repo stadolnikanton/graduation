@@ -27,6 +27,7 @@ class User(Base):
     blacklisted_tokens: Mapped[list["BlacklistedToken"]] = relationship(
         "BlacklistedToken",
         back_populates="owner_jwt",
+        overlaps="owner_jwt",
         lazy="select",
         cascade="all, delete-orphan",
     )
