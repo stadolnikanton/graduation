@@ -1,5 +1,4 @@
 import secrets
-
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -10,6 +9,8 @@ from fastapi.responses import FileResponse
 
 from app.db import async_session_maker
 from core.deps import get_current_user
+from core.minio_client import download_from_minio
+from app.config import settings
 
 from models.file import File as FileModel
 from models.link import ShareLink
@@ -128,16 +129,21 @@ async def download_shared_file(token: str):
         if not file:
             raise HTTPException(status_code=404, detail="File not found")
 
+        # Увеличиваем счетчик скачиваний
         share_link.download_count += 1
         await session.commit()
 
-        file_path = Path(file.path)
-        if not file_path.exists():
-            raise HTTPException(
-                status_code=404, detail="File not found on server")
-
-        return FileResponse(
-            path=file_path,
-            filename=file.original_filename,
-            media_type=file.type
+        # Скачиваем файл из MinIO вместо локальной файловой системы
+        file_response = download_from_minio(
+            file.name, 
+            settings.MINIO_BUCKET_NAME,
+            file.original_filename
         )
+        
+        if not file_response:
+            raise HTTPException(
+                status_code=404, 
+                detail="File not found in storage"
+            )
+
+        return file_response

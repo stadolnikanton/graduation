@@ -55,40 +55,58 @@ function displayFileInfo(data) {
 
 async function downloadSharedFile() {
     const token = getTokenFromUrl();
-    if (!token) return;
+    if (!token) {
+        showError('Неверная ссылка');
+        return;
+    }
 
     try {
-        const response = await fetch(`${API_BASE}/share/${token}`, {
-            credentials: 'include'
-        });
+        const response = await fetch(`${API_BASE}/share/${token}`);
 
         if (response.ok) {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-
-            // Получаем имя файла из заголовков или из ответа
-            const filename = response.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1]
-                || response.headers.get('X-Filename')
-                || 'file';
-
+            
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = 'file';
+            
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                if (filenameMatch && filenameMatch[1]) {
+                    filename = filenameMatch[1].replace(/['"]/g, '');
+                    filename = decodeURIComponent(filename);
+                }
+            }
+            
             a.download = filename;
             document.body.appendChild(a);
             a.click();
-            window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
-
-            // Обновляем информацию после скачивания
-            setTimeout(() => loadShareInfo(), 1000);
-        } else if (response.status === 410) {
-            showExpired();
+            window.URL.revokeObjectURL(url);
+            
+            setTimeout(() => {
+                loadShareInfo();
+                showToast('Файл успешно скачан', 'success');
+            }, 1000);
+            
         } else if (response.status === 404) {
             showError('Ссылка не найдена');
+        } else if (response.status === 410) {
+            const data = await response.json().catch(() => ({}));
+            if (data.detail === 'Link expired') {
+                showExpired();
+            } else if (data.detail === 'Download limit reached') {
+                showMaxDownloadsReached();
+            } else {
+                showError('Ссылка больше не действительна');
+            }
         } else {
             showError('Ошибка скачивания файла');
         }
     } catch (error) {
+        console.error('Download error:', error);
         showError('Ошибка соединения с сервером');
     }
 }
@@ -119,6 +137,34 @@ function formatFileSize(bytes) {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `position-fixed bottom-0 end-0 m-3 toast align-items-center text-bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    const bsToast = new bootstrap.Toast(toast, {
+        autohide: true,
+        delay: 3000
+    });
+    
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
 }
 
 document.addEventListener('DOMContentLoaded', loadShareInfo);

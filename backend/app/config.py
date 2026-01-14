@@ -1,15 +1,19 @@
 import os
 
+
 from dotenv import load_dotenv
 
 from pydantic_settings import BaseSettings
 from pydantic import SecretStr
 
 
+
 load_dotenv()
 
 
 class Settings(BaseSettings):
+
+    # Postgres
     DB_HOST: str = os.getenv("DB_HOST")
     DB_PORT: int = os.getenv("DB_PORT")
     DB_NAME: str = os.getenv("DB_NAME")
@@ -22,11 +26,19 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # MinIO
+    MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "minio")
+    MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+    MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+    MINIO_BUCKET_NAME: str = os.getenv("MINIO_BUCKET_NAME", "uploads")
+
     # model_config = SettingsConfigDict(
     #     env_file=os.path.join(
     #         os.path.dirname(os.path.abspath(__file__)), "..", ".env"
     #     )
     # )
+
+
     UPLOAD_DIR: str = "static"
 
 
@@ -47,3 +59,5 @@ def get_files_path():
     else:
         os.mkdir(settings.UPLOAD_DIR)
         return settings.UPLOAD_DIR
+
+    

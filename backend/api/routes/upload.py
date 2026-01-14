@@ -1,20 +1,17 @@
 import os
 import uuid
-from pathlib import Path
 from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
 
 from sqlalchemy import select, delete
 from sqlalchemy.exc import IntegrityError
 
-
-from app.config import get_files_path
 from app.db import async_session_maker
+from app.config import settings
 
 from core.deps import get_current_user
-from core.minio_client import upload_to_minio, create_bucket, download_from_minio
+from core.minio_client import upload_file, download_from_minio, delete_from_minio, ensure_bucket_exists
 
 from schemas.file import ShareRequest
 
@@ -25,13 +22,10 @@ from models.link import ShareLink
 
 router = APIRouter(prefix="/files", tags=["files"])
 
-UPLOAD_DIR = get_files_path()
-
 
 @router.get("/")
 async def get_files_user(user: User = Depends(get_current_user)):
     async with async_session_maker() as session:
-        # 1. Собственные файлы пользователя
         result = await session.execute(
             select(FileModel)
             .where(FileModel.owner == user.id)
@@ -53,7 +47,6 @@ async def get_files_user(user: User = Depends(get_current_user)):
                 "shared_file": False
             })
 
-        # 2. Файлы, к которым пользователю предоставили доступ
         result = await session.execute(
             select(FileModel)
             .join(FileShares, FileModel.id == FileShares.file_id)
@@ -125,8 +118,7 @@ async def grant_file_access(
         existing_share = result.scalar_one_or_none()
 
         if existing_share:
-            raise HTTPException(
-                409, "Доступ уже предоставлен этому пользователю")
+            raise HTTPException(409, "Доступ уже предоставлен этому пользователю")
 
         try:
             new_share = FileShares(
@@ -238,17 +230,14 @@ async def download_file(
     file_id: int,
     user: User = Depends(get_current_user)
 ):
-
     async with async_session_maker() as session:
         result = await session.execute(select(FileModel).where(FileModel.id == file_id))
         db_file = result.scalar_one_or_none()
 
         if not db_file:
-            raise HTTPException(404, "Файл не найден")
+            raise HTTPException(status_code=404, detail="Файл не найден")
 
-        if db_file.owner == user.id:
-            raise HTTPException(403, "Нет доступа к файлу")
-        else:
+        if db_file.owner != user.id:
             result = await session.execute(
                 select(FileShares).where(
                     FileShares.file_id == file_id,
@@ -256,19 +245,19 @@ async def download_file(
                 )
             )
             access_file = result.scalar_one_or_none()
-
+            
             if not access_file:
-                raise HTTPException(403, "Нет доступа к файлу")
+                raise HTTPException(status_code=403, detail="Нет доступа к файлу")
 
-    file_path = Path(db_file.path)
-    if not file_path.exists():
-        raise HTTPException(404, "Файл отсутствует на сервере")
-
-    return FileResponse(
-        path=file_path,
-        filename=db_file.original_filename,
-        media_type=db_file.type
-    )
+    file_response = download_from_minio(db_file.name, settings.MINIO_BUCKET_NAME, db_file.original_filename)
+    
+    if not file_response:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Файл '{db_file.original_filename}' отсутствует в хранилище"
+        )
+        
+    return file_response
 
 
 @router.delete("/{file_id}")
@@ -285,19 +274,15 @@ async def delete_file(
         if file.owner != user.id:
             raise HTTPException(status_code=403, detail="Access denied")
 
-        delete_links_stmt = delete(ShareLink).where(
-            ShareLink.file_id == file_id)
+        delete_links_stmt = delete(ShareLink).where(ShareLink.file_id == file_id)
         await session.execute(delete_links_stmt)
 
-        file_path = Path(file.path)
-        if file_path.exists():
-            try:
-                file_path.unlink()
-            except Exception as e:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Failed to delete file from disk: {str(e)}"
-                )
+        delete_success = delete_from_minio(file.name, settings.MINIO_BUCKET_NAME)
+        if not delete_success:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to delete file from storage"
+            )
 
         await session.delete(file)
         await session.commit()
@@ -315,17 +300,20 @@ async def create_file(
     user: User = Depends(get_current_user)
 ):
     MAX_FILE_SIZE = 100 * 1024 * 1024
+    
     content = await file.read()
 
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
-            413, f"Файл слишком большой. Максимальный размер: {MAX_FILE_SIZE // (1024*1024)}MB")
+            status_code=413, 
+            detail=f"Файл слишком большой. Максимальный размер: {MAX_FILE_SIZE // (1024*1024)}MB"
+        )
 
     file_extension = os.path.splitext(file.filename)[1].lower()
-
-    file_extension = os.path.splitext(file.filename)[1]
     unique_filename = f"{uuid.uuid4()}{file_extension}"
-    file_path = Path(UPLOAD_DIR) / unique_filename
+    file_path = f"http://{settings.MINIO_ENDPOINT}:9000/{settings.MINIO_BUCKET_NAME}/{unique_filename}"
+
+    ensure_bucket_exists(settings.MINIO_BUCKET_NAME)
 
     async with async_session_maker() as session:
         result = await session.execute(
@@ -338,13 +326,18 @@ async def create_file(
 
         if existing_file:
             raise HTTPException(
-                409, f"Файл с именем '{file.filename}' уже существует у вас")
+                status_code=409, 
+                detail=f"Файл с именем '{file.filename}' уже существует у вас"
+            )
 
-        file_path.write_bytes(content)
-
-        upload_to_minio(file, "test")
-
-        print(f"###########{result}")
+        file.file.seek(0)
+        success = upload_file(file, unique_filename, settings.MINIO_BUCKET_NAME)
+        
+        if not success:
+            raise HTTPException(
+                status_code=500, 
+                detail="Ошибка при загрузке файла в хранилище"
+            )
 
         file_data = {
             "name": unique_filename,
@@ -367,6 +360,7 @@ async def create_file(
         "saved_as": unique_filename,
         "size": len(content),
         "download_url": f"/files/{db_file.id}/download",
+        "minio_url": file_path,
     }
 
 
@@ -395,11 +389,10 @@ async def create_files(
 
         total_size += len(content)
 
-        file_extension = os.path.splitext(file.filename)[1].lower()
-
     if total_size > MAX_TOTAL_SIZE:
-        raise HTTPException(
-            413, f"Общий размер файлов превышает {MAX_TOTAL_SIZE // (1024*1024)}MB")
+        raise HTTPException(413, f"Общий размер файлов превышает {MAX_TOTAL_SIZE // (1024*1024)}MB")
+
+    ensure_bucket_exists(settings.MINIO_BUCKET_NAME)
 
     for file in files:
         try:
@@ -407,9 +400,9 @@ async def create_files(
                 continue
 
             content = await file.read()
-            file_extension = os.path.splitext(file.filename)[1]
+            file_extension = os.path.splitext(file.filename)[1].lower()
             unique_filename = f"{uuid.uuid4()}{file_extension}"
-            file_path = Path(UPLOAD_DIR) / unique_filename
+            file_path = f"http://{settings.MINIO_ENDPOINT}:9000/{settings.MINIO_BUCKET_NAME}/{unique_filename}"
 
             async with async_session_maker() as session:
                 result = await session.execute(
@@ -439,7 +432,16 @@ async def create_files(
 
                     file.filename = new_filename
 
-            file_path.write_bytes(content)
+            file.file.seek(0)
+            success = upload_file(file, unique_filename, settings.MINIO_BUCKET_NAME)
+            
+            if not success:
+                results.append({
+                    "status": "error",
+                    "filename": file.filename,
+                    "error": "Ошибка при загрузке в хранилище"
+                })
+                continue
 
             file_data = {
                 "name": unique_filename,
@@ -460,7 +462,6 @@ async def create_files(
                     "status": "success",
                     "file_id": db_file.id,
                     "filename": file.filename,
-                    "original_name": file.filename,
                     "saved_as": unique_filename,
                     "size": len(content),
                     "download_url": f"/files/{db_file.id}/download"

@@ -486,36 +486,70 @@ async function uploadFiles() {
     fileInput.value = '';
 }
 
-function downloadFile(fileId) {
-    window.open(`${API_BASE}/files/${fileId}/download`, '_blank');
+async function downloadFile(fileId) {
+    console.log('Скачивание файла с ID:', fileId);
+    
+    try {
+        // Используем API endpoint для скачивания
+        const downloadUrl = `${API_BASE}/files/${fileId}/download`;
+        console.log('Используется URL:', downloadUrl);
+        
+        // Открываем в новом окне
+        window.open(downloadUrl, '_blank');
+        
+        showToast('Начато скачивание файла', 'success');
+        
+    } catch (error) {
+        console.error('Ошибка при скачивании файла:', error);
+        showToast('Ошибка скачивания файла', 'error');
+    }
 }
 
 function openFileActions(fileId) {
+    console.log('openFileActions вызвана с fileId:', fileId, 'тип:', typeof fileId);
+    
     const file = findFileById(fileId);
-    if (!file) return;
+    if (!file) {
+        console.error('Файл не найден, fileId:', fileId);
+        showToast('Файл не найден', 'error');
+        return;
+    }
 
-    const modal = new bootstrap.Modal(document.getElementById('fileModal'));
-    document.getElementById('fileModalTitle').textContent = file.original_filename || file.filename;
+    const modalElement = document.getElementById('fileModal');
+    if (!modalElement) {
+        console.error('Модальное окно не найдено');
+        return;
+    }
 
-    const isOwner = !file.shared_file && !file.is_shared;
+    const modal = new bootstrap.Modal(modalElement);
+    const modalTitle = document.getElementById('fileModalTitle');
+    if (modalTitle) {
+        modalTitle.textContent = file.original_filename || file.filename || 'Файл';
+    }
 
+    const isOwner = file.is_owner !== false && !file.shared_file;
+
+    // Создаем безопасный HTML
     let content = `
         <div class="mb-3">
-            <p><strong>Имя файла:</strong> ${file.original_filename || file.filename}</p>
+            <p><strong>Имя файла:</strong> ${escapeHtml(file.original_filename || file.filename || '')}</p>
             <p><strong>Размер:</strong> ${formatFileSize(file.size)}</p>
-            <p><strong>Дата создания:</strong> ${new Date(file.created_at || file.uploaded_at).toLocaleString()}</p>
+            <p><strong>Дата создания:</strong> ${file.created_at ? new Date(file.created_at).toLocaleString() : 'Неизвестно'}</p>
             <p><strong>Статус:</strong> ${isOwner ? 'Владелец' : 'Доступ предоставлен'}</p>
         </div>
         
         <div class="d-grid gap-2">
-            <button class="btn btn-primary" onclick="downloadFile(${fileId})">
+            <button class="btn btn-primary" id="modalDownloadBtn" data-file-id="${fileId}">
                 <i class="bi bi-download me-2"></i>Скачать файл
             </button>
     `;
 
     if (isOwner) {
         content += `
-            <button class="btn btn-outline-danger" onclick="deleteFile(${fileId})">
+            <button class="btn btn-outline-primary" id="modalShareBtn" data-file-id="${fileId}">
+                <i class="bi bi-share me-2"></i>Поделиться
+            </button>
+            <button class="btn btn-outline-danger" id="modalDeleteBtn" data-file-id="${fileId}">
                 <i class="bi bi-trash me-2"></i>Удалить файл
             </button>
         `;
@@ -523,11 +557,54 @@ function openFileActions(fileId) {
 
     content += `</div>`;
 
-    document.getElementById('fileModalContent').innerHTML = content;
+    const modalContent = document.getElementById('fileModalContent');
+    if (modalContent) {
+        modalContent.innerHTML = content;
+        
+        setTimeout(() => {
+            const downloadBtn = document.getElementById('modalDownloadBtn');
+            const shareBtn = document.getElementById('modalShareBtn');
+            const deleteBtn = document.getElementById('modalDeleteBtn');
+            
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', function() {
+                    const fileId = this.getAttribute('data-file-id');
+                    downloadFile(fileId);
+                    modal.hide();
+                });
+            }
+            
+            if (shareBtn) {
+                shareBtn.addEventListener('click', function() {
+                    const fileId = this.getAttribute('data-file-id');
+                    modal.hide();
+                    setTimeout(() => {
+                        showSection('shared');
+                        document.getElementById('share-file-select').value = fileId;
+                        loadSharedUsers(fileId);
+                    }, 300);
+                });
+            }
+            
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', function() {
+                    const fileId = this.getAttribute('data-file-id');
+                    deleteFile(fileId, modal);
+                });
+            }
+        }, 0);
+    }
+    
     modal.show();
 }
 
-async function deleteFile(fileId) {
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+async function deleteFile(fileId, modal = null) {
     if (!confirm('Вы уверены, что хотите удалить этот файл?')) return;
 
     try {
@@ -537,28 +614,84 @@ async function deleteFile(fileId) {
         });
 
         if (response.ok) {
-            showToast('Файл успешно удален', 'success');
+            const result = await response.json();
+            showToast(result.message || 'Файл успешно удален', 'success');
+            
+            if (modal && typeof modal.hide === 'function') {
+                modal.hide();
+            } else {
+                const modalElement = document.getElementById('fileModal');
+                if (modalElement) {
+                    const bsModal = bootstrap.Modal.getInstance(modalElement);
+                    if (bsModal) bsModal.hide();
+                }
+            }
+            
             await loadFiles();
-            bootstrap.Modal.getInstance(document.getElementById('fileModal')).hide();
+        } else if (response.status === 404) {
+            showToast('Файл не найден', 'error');
+        } else if (response.status === 403) {
+            showToast('Нет прав на удаление этого файла', 'error');
         } else {
             const error = await response.json();
-            showToast(error.detail || 'Ошибка удаления', 'danger');
+            showToast(error.detail || 'Ошибка удаления', 'error');
         }
     } catch (error) {
-        showToast('Ошибка соединения', 'danger');
+        console.error('Ошибка при удалении файла:', error);
+        showToast('Ошибка соединения с сервером', 'error');
     }
 }
 
-function findFileById(fileId) {
-    if (!filesData) return null;
 
-    // Ищем во всех файлах
-    const allFiles = [
-        ...(filesData.files?.owned || []),
-        ...(filesData.files?.shared || []),
-        ...(filesData.files || [])
-    ];
-    return allFiles.find(file => file.id === fileId);
+function findFileById(fileId) {
+    // Защита от undefined/null
+    if (!filesData) {
+        console.warn('filesData не определен');
+        return null;
+    }
+
+    try {
+        // Проверяем структуру данных
+        let allFiles = [];
+        
+        if (filesData.files) {
+            // Современная структура: filesData.files.owned и filesData.files.shared
+            if (filesData.files.owned || filesData.files.shared) {
+                allFiles = [
+                    ...(filesData.files.owned || []),
+                    ...(filesData.files.shared || [])
+                ];
+            } 
+            // Старая структура: filesData.files - это массив
+            else if (Array.isArray(filesData.files)) {
+                allFiles = [...filesData.files];
+            }
+        } 
+        // Ещё более старая структура: filesData - это массив
+        else if (Array.isArray(filesData)) {
+            allFiles = [...filesData];
+        }
+
+        // Ищем файл
+        const foundFile = allFiles.find(file => {
+            // Проверяем и числовой и строковый ID
+            return file.id === fileId || 
+                   file.id === parseInt(fileId) || 
+                   file.id == fileId; // Нестрогое сравнение
+        });
+        
+        if (!foundFile) {
+            console.warn(`Файл с ID ${fileId} не найден`);
+            console.log('Доступные файлы:', allFiles);
+        }
+        
+        return foundFile || null;
+        
+    } catch (error) {
+        console.error('Ошибка при поиске файла:', error);
+        console.log('Текущий filesData:', filesData);
+        return null;
+    }
 }
 
 async function logout() {
