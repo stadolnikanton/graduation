@@ -6,9 +6,9 @@
 
 Перед началом работы убедитесь, что у вас установлены:
 
-* Docker
-* Docker Compose
-* Make
+- Docker
+- Docker Compose
+- Make
 
 ## Быстрый старт
 
@@ -19,9 +19,10 @@ make up
 
 После запуска сервисы будут доступны по адресам:
 
-* **Frontend:** [http://localhost:8080](http://localhost:8080)
-* **Backend API:** [http://localhost:8001](http://localhost:8001)
-* **PostgreSQL:** localhost:5433
+- **Frontend:** [http://localhost:8080](http://localhost:8080)
+- **Backend API:** [http://localhost:8001](http://localhost:8001)
+- **PostgreSQL:** localhost:5433
+- **MiniO:** [http://localhost:9000](http://localhost:9000)
 
 ## Управление проектом
 
@@ -79,9 +80,9 @@ make volumes    # Список docker volumes
 
 Проект разделён на сервисы:
 
-* **Frontend** — пользовательский интерфейс
-* **Backend** — API и бизнес-логика
-* **PostgreSQL** — база данных
+- **Frontend** — пользовательский интерфейс
+- **Backend** — API и бизнес-логика
+- **PostgreSQL** — база данных
 
 ## Репозиторий
 
