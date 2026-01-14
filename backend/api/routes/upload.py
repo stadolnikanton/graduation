@@ -14,6 +14,7 @@ from app.config import get_files_path
 from app.db import async_session_maker
 
 from core.deps import get_current_user
+from core.minio_client import upload_to_minio, create_bucket, download_from_minio
 
 from schemas.file import ShareRequest
 
@@ -340,6 +341,10 @@ async def create_file(
                 409, f"Файл с именем '{file.filename}' уже существует у вас")
 
         file_path.write_bytes(content)
+
+        upload_to_minio(file, "test")
+
+        print(f"###########{result}")
 
         file_data = {
             "name": unique_filename,
