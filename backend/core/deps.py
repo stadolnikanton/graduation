@@ -29,7 +29,9 @@ class AuthCookies:
         secure: bool | None = None,
         path: str = "/",
     ) -> None:
-        set_auth_cookies(self.response, access_token, refresh_token, secure, path)
+        set_auth_cookies(
+            self.response, access_token, refresh_token, secure, path
+        )
 
     def delete(self, path: str = "/") -> None:
         delete_auth_cookies(self.response, path)
@@ -56,7 +58,6 @@ class AuthCookies:
         samesite: str = "strict",
         path: str = "/",
     ) -> None:
-
         if secure is None:
             secure = False
 

@@ -1,12 +1,9 @@
 import pytest
-
+from app.db import async_session_maker, engine
+from app.main import app
 from httpx import ASGITransport, AsyncClient
-
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import close_all_sessions
-
-from app.main import app
-from app.db import async_session_maker, engine
 
 
 @pytest.fixture(autouse=True)
@@ -32,17 +29,3 @@ async def db_connect():
         transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
         yield ac
-
-
-@pytest.fixture()
-async def register(db_connect):
-    response = await db_connect.post(
-        "/auth/register",
-        json={
-            "name": "test_user_reg",
-            "email": "test_reg@mail.com",
-            "password": "Vfhnf12999",
-            "password_confirm": "Vfhnf12999",
-        },
-    )
-
