@@ -13,11 +13,14 @@ async def test_logout(db_connect):
             "password_confirm": "Vfhnf12999",
         },
     )
-    
+
     response = await db_connect.post("/auth/logout")
-    
+
     assert response.status_code == 200
-    assert response.json() == {"status": 200, "message": "Logged out successfully"}
+    assert response.json() == {
+        "status": 200,
+        "message": "Logged out successfully",
+    }
 
 
 @pytest.mark.anyio
@@ -33,6 +36,7 @@ async def test_refresh_token(db_connect):
         },
     )
     response = await db_connect.post("/auth/refresh")
-    
+
     assert response.status_code == 200
     assert response.json() == {"status": 200}
+

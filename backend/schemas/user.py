@@ -9,7 +9,11 @@ class UserBase(BaseModel):
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
-    password: str = Field(min_length=8, max_length=50, description="Password must be 8-50 characters")
+    password: str = Field(
+        min_length=8,
+        max_length=50,
+        description="Password must be 8-50 characters",
+    )
     password_confirm: str
 
     @field_validator("password")
@@ -29,4 +33,3 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
-
