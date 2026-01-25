@@ -1,11 +1,9 @@
 import secrets
 from datetime import datetime, timedelta
-from pathlib import Path
 
 from sqlalchemy.future import select
 
 from fastapi import APIRouter, Form, HTTPException, Depends
-from fastapi.responses import FileResponse
 
 from app.db import async_session_maker
 from core.deps import get_current_user

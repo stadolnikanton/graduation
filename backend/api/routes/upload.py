@@ -2,23 +2,23 @@ import os
 import uuid
 from typing import List
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-
-from sqlalchemy import select, delete
-from sqlalchemy.exc import IntegrityError
-
-from app.db import async_session_maker
 from app.config import settings
-
+from app.db import async_session_maker
 from core.deps import get_current_user
-from core.minio_client import upload_file, download_from_minio, delete_from_minio, ensure_bucket_exists
-
-from schemas.file import ShareRequest
-
-from models.file import FileShares, File as FileModel
-from models.user import User
+from core.minio_client import (
+    delete_from_minio,
+    download_from_minio,
+    ensure_bucket_exists,
+    upload_file,
+)
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from models.file import File as FileModel
+from models.file import FileShares
 from models.link import ShareLink
-
+from models.user import User
+from schemas.file import ShareRequest
+from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 
 router = APIRouter(prefix="/files", tags=["files"])
 
@@ -35,17 +35,23 @@ async def get_files_user(user: User = Depends(get_current_user)):
 
         ownded_files = []
         for file in owned_files_result:
-            ownded_files.append({
-                "id": file.id,
-                "name": file.name,
-                "original_filename": file.original_filename,
-                "type": file.type,
-                "size": file.size,
-                "created_at": file.created_at.isoformat() if file.created_at else None,
-                "download_url": f"/files/{file.id}/download",
-                "is_owner": True,
-                "shared_file": False
-            })
+            ownded_files.append(
+                {
+                    "id": file.id,
+                    "name": file.name,
+                    "original_filename": file.original_filename,
+                    "type": file.type,
+                    "size": file.size,
+                    "created_at": (
+                        file.created_at.isoformat()
+                        if file.created_at
+                        else None
+                    ),
+                    "download_url": f"/files/{file.id}/download",
+                    "is_owner": True,
+                    "shared_file": False,
+                }
+            )
 
         result = await session.execute(
             select(FileModel)
@@ -57,28 +63,31 @@ async def get_files_user(user: User = Depends(get_current_user)):
 
         shared_files = []
         for file in shared_files_result:
-            shared_files.append({
-                "id": file.id,
-                "name": file.name,
-                "original_filename": file.original_filename,
-                "type": file.type,
-                "size": file.size,
-                "created_at": file.created_at.isoformat() if file.created_at else None,
-                "download_url": f"/files/{file.id}/download",
-                "is_owner": False,
-                "shared_file": True
-            })
+            shared_files.append(
+                {
+                    "id": file.id,
+                    "name": file.name,
+                    "original_filename": file.original_filename,
+                    "type": file.type,
+                    "size": file.size,
+                    "created_at": (
+                        file.created_at.isoformat()
+                        if file.created_at
+                        else None
+                    ),
+                    "download_url": f"/files/{file.id}/download",
+                    "is_owner": False,
+                    "shared_file": True,
+                }
+            )
 
     return {
-        "files": {
-            "owned": ownded_files,
-            "shared": shared_files
-        },
+        "files": {"owned": ownded_files, "shared": shared_files},
         "counts": {
             "owned": len(ownded_files),
             "shared": len(shared_files),
-            "total": len(ownded_files) + len(shared_files)
-        }
+            "total": len(ownded_files) + len(shared_files),
+        },
     }
 
 
@@ -89,7 +98,9 @@ async def grant_file_access(
     user: User = Depends(get_current_user),
 ):
     async with async_session_maker() as session:
-        result = await session.execute(select(FileModel).where(FileModel.id == file_id))
+        result = await session.execute(
+            select(FileModel).where(FileModel.id == file_id)
+        )
         db_file = result.scalar_one_or_none()
 
         if not db_file:
@@ -112,20 +123,22 @@ async def grant_file_access(
         result = await session.execute(
             select(FileShares).where(
                 FileShares.file_id == file_id,
-                FileShares.user_id == data.user_id
+                FileShares.user_id == data.user_id,
             )
         )
         existing_share = result.scalar_one_or_none()
 
         if existing_share:
-            raise HTTPException(409, "Доступ уже предоставлен этому пользователю")
+            raise HTTPException(
+                409, "Доступ уже предоставлен этому пользователю"
+            )
 
         try:
             new_share = FileShares(
                 file_id=file_id,
                 user_id=data.user_id,
                 owner_id=user.id,
-                access_level=data.access_level
+                access_level=data.access_level,
             )
 
             session.add(new_share)
@@ -137,7 +150,7 @@ async def grant_file_access(
                 "share_id": new_share.id,
                 "file_id": file_id,
                 "recipient_id": data.user_id,
-                "access_level": data.access_level
+                "access_level": data.access_level,
             }
 
         except IntegrityError:
@@ -147,13 +160,13 @@ async def grant_file_access(
 
 @router.get("/{file_id}/shared-users")
 async def get_shared_users(
-        file_id: int,
-        current_user: User = Depends(get_current_user)
+    file_id: int, current_user: User = Depends(get_current_user)
 ):
     async with async_session_maker() as session:
         result = await session.execute(
-            select(FileShares.user_id, FileShares.access_level)
-            .where(FileShares.file_id == file_id)
+            select(FileShares.user_id, FileShares.access_level).where(
+                FileShares.file_id == file_id
+            )
         )
         shared_records = result.all()
 
@@ -173,12 +186,14 @@ async def get_shared_users(
         for record in shared_records:
             user = users_dict.get(record.user_id)
             if user:
-                response.append({
-                    "id": user.id,
-                    "name": user.name,
-                    "email": user.email,
-                    "access_level": record.access_level
-                })
+                response.append(
+                    {
+                        "id": user.id,
+                        "name": user.name,
+                        "email": user.email,
+                        "access_level": record.access_level,
+                    }
+                )
 
         return response
 
@@ -206,8 +221,7 @@ async def remove_file_share(
 
         result = await session.execute(
             select(FileShares).where(
-                FileShares.file_id == file_id,
-                FileShares.user_id == user_id
+                FileShares.file_id == file_id, FileShares.user_id == user_id
             )
         )
         file_share = result.scalar_one_or_none()
@@ -221,17 +235,16 @@ async def remove_file_share(
         return {
             "message": "Доступ успешно удален",
             "file_id": file_id,
-            "removed_user_id": user_id
+            "removed_user_id": user_id,
         }
 
 
 @router.get("/{file_id}/download")
-async def download_file(
-    file_id: int,
-    user: User = Depends(get_current_user)
-):
+async def download_file(file_id: int, user: User = Depends(get_current_user)):
     async with async_session_maker() as session:
-        result = await session.execute(select(FileModel).where(FileModel.id == file_id))
+        result = await session.execute(
+            select(FileModel).where(FileModel.id == file_id)
+        )
         db_file = result.scalar_one_or_none()
 
         if not db_file:
@@ -241,30 +254,31 @@ async def download_file(
             result = await session.execute(
                 select(FileShares).where(
                     FileShares.file_id == file_id,
-                    FileShares.user_id == user.id
+                    FileShares.user_id == user.id,
                 )
             )
             access_file = result.scalar_one_or_none()
-            
-            if not access_file:
-                raise HTTPException(status_code=403, detail="Нет доступа к файлу")
 
-    file_response = download_from_minio(db_file.name, settings.MINIO_BUCKET_NAME, db_file.original_filename)
-    
+            if not access_file:
+                raise HTTPException(
+                    status_code=403, detail="Нет доступа к файлу"
+                )
+
+    file_response = download_from_minio(
+        db_file.name, settings.MINIO_BUCKET_NAME, db_file.original_filename
+    )
+
     if not file_response:
         raise HTTPException(
-            status_code=404, 
-            detail=f"Файл '{db_file.original_filename}' отсутствует в хранилище"
+            status_code=404,
+            detail=f"Файл '{db_file.original_filename}' отсутствует в хранилище",
         )
-        
+
     return file_response
 
 
 @router.delete("/{file_id}")
-async def delete_file(
-    file_id: int,
-    user: User = Depends(get_current_user)
-):
+async def delete_file(file_id: int, user: User = Depends(get_current_user)):
     async with async_session_maker() as session:
         file = await session.get(FileModel, file_id)
 
@@ -274,14 +288,17 @@ async def delete_file(
         if file.owner != user.id:
             raise HTTPException(status_code=403, detail="Access denied")
 
-        delete_links_stmt = delete(ShareLink).where(ShareLink.file_id == file_id)
+        delete_links_stmt = delete(ShareLink).where(
+            ShareLink.file_id == file_id
+        )
         await session.execute(delete_links_stmt)
 
-        delete_success = delete_from_minio(file.name, settings.MINIO_BUCKET_NAME)
+        delete_success = delete_from_minio(
+            file.name, settings.MINIO_BUCKET_NAME
+        )
         if not delete_success:
             raise HTTPException(
-                status_code=500,
-                detail="Failed to delete file from storage"
+                status_code=500, detail="Failed to delete file from storage"
             )
 
         await session.delete(file)
@@ -290,23 +307,22 @@ async def delete_file(
         return {
             "status": "success",
             "message": "File and all associated share links deleted successfully",
-            "file_id": file_id
+            "file_id": file_id,
         }
 
 
 @router.post("/upload")
 async def create_file(
-    file: UploadFile = File(...),
-    user: User = Depends(get_current_user)
+    file: UploadFile = File(...), user: User = Depends(get_current_user)
 ):
     MAX_FILE_SIZE = 100 * 1024 * 1024
-    
+
     content = await file.read()
 
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
-            status_code=413, 
-            detail=f"Файл слишком большой. Максимальный размер: {MAX_FILE_SIZE // (1024*1024)}MB"
+            status_code=413,
+            detail=f"Файл слишком большой. Максимальный размер: {MAX_FILE_SIZE // (1024 * 1024)}MB",
         )
 
     file_extension = os.path.splitext(file.filename)[1].lower()
@@ -319,24 +335,25 @@ async def create_file(
         result = await session.execute(
             select(FileModel).where(
                 FileModel.owner == user.id,
-                FileModel.original_filename == file.filename
+                FileModel.original_filename == file.filename,
             )
         )
         existing_file = result.scalar_one_or_none()
 
         if existing_file:
             raise HTTPException(
-                status_code=409, 
-                detail=f"Файл с именем '{file.filename}' уже существует у вас"
+                status_code=409,
+                detail=f"Файл с именем '{file.filename}' уже существует у вас",
             )
 
         file.file.seek(0)
-        success = upload_file(file, unique_filename, settings.MINIO_BUCKET_NAME)
-        
+        success = upload_file(
+            file, unique_filename, settings.MINIO_BUCKET_NAME
+        )
+
         if not success:
             raise HTTPException(
-                status_code=500, 
-                detail="Ошибка при загрузке файла в хранилище"
+                status_code=500, detail="Ошибка при загрузке файла в хранилище"
             )
 
         file_data = {
@@ -366,8 +383,7 @@ async def create_file(
 
 @router.post("/upload/multiple")
 async def create_files(
-    files: List[UploadFile] = File(...),
-    user: User = Depends(get_current_user)
+    files: List[UploadFile] = File(...), user: User = Depends(get_current_user)
 ):
     MAX_TOTAL_SIZE = 500 * 1024 * 1024
     MAX_FILE_SIZE = 100 * 1024 * 1024
@@ -380,23 +396,31 @@ async def create_files(
         await file.seek(0)
 
         if len(content) > MAX_FILE_SIZE:
-            results.append({
-                "status": "error",
-                "filename": file.filename,
-                "error": f"Файл слишком большой. Максимум: {MAX_FILE_SIZE // (1024*1024)}MB"
-            })
+            results.append(
+                {
+                    "status": "error",
+                    "filename": file.filename,
+                    "error": f"Файл слишком большой. Максимум: {MAX_FILE_SIZE // (1024 * 1024)}MB",
+                }
+            )
             continue
 
         total_size += len(content)
 
     if total_size > MAX_TOTAL_SIZE:
-        raise HTTPException(413, f"Общий размер файлов превышает {MAX_TOTAL_SIZE // (1024*1024)}MB")
+        raise HTTPException(
+            413,
+            f"Общий размер файлов превышает {MAX_TOTAL_SIZE // (1024 * 1024)}MB",
+        )
 
     ensure_bucket_exists(settings.MINIO_BUCKET_NAME)
 
     for file in files:
         try:
-            if any(r.get("filename") == file.filename and r["status"] == "error" for r in results):
+            if any(
+                r.get("filename") == file.filename and r["status"] == "error"
+                for r in results
+            ):
                 continue
 
             content = await file.read()
@@ -408,7 +432,7 @@ async def create_files(
                 result = await session.execute(
                     select(FileModel).where(
                         FileModel.owner == user.id,
-                        FileModel.original_filename == file.filename
+                        FileModel.original_filename == file.filename,
                     )
                 )
                 existing_file = result.scalar_one_or_none()
@@ -422,25 +446,31 @@ async def create_files(
                         result = await session.execute(
                             select(FileModel).where(
                                 FileModel.owner == user.id,
-                                FileModel.original_filename == new_filename
+                                FileModel.original_filename == new_filename,
                             )
                         )
                         if not result.scalar_one_or_none():
                             break
                         counter += 1
-                        new_filename = f"{base_name} ({counter}){file_extension}"
+                        new_filename = (
+                            f"{base_name} ({counter}){file_extension}"
+                        )
 
                     file.filename = new_filename
 
             file.file.seek(0)
-            success = upload_file(file, unique_filename, settings.MINIO_BUCKET_NAME)
-            
+            success = upload_file(
+                file, unique_filename, settings.MINIO_BUCKET_NAME
+            )
+
             if not success:
-                results.append({
-                    "status": "error",
-                    "filename": file.filename,
-                    "error": "Ошибка при загрузке в хранилище"
-                })
+                results.append(
+                    {
+                        "status": "error",
+                        "filename": file.filename,
+                        "error": "Ошибка при загрузке в хранилище",
+                    }
+                )
                 continue
 
             file_data = {
@@ -458,25 +488,25 @@ async def create_files(
                 await session.commit()
                 await session.refresh(db_file)
 
-                results.append({
-                    "status": "success",
-                    "file_id": db_file.id,
-                    "filename": file.filename,
-                    "saved_as": unique_filename,
-                    "size": len(content),
-                    "download_url": f"/files/{db_file.id}/download"
-                })
+                results.append(
+                    {
+                        "status": "success",
+                        "file_id": db_file.id,
+                        "filename": file.filename,
+                        "saved_as": unique_filename,
+                        "size": len(content),
+                        "download_url": f"/files/{db_file.id}/download",
+                    }
+                )
 
         except Exception as e:
-            results.append({
-                "status": "error",
-                "filename": file.filename,
-                "error": str(e)
-            })
+            results.append(
+                {"status": "error", "filename": file.filename, "error": str(e)}
+            )
 
     return {
         "total_files": len(files),
         "successful": len([r for r in results if r["status"] == "success"]),
         "failed": len([r for r in results if r["status"] == "error"]),
-        "files": results
+        "files": results,
     }

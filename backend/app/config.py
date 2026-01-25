@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
 
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import SecretStr, Field
 
 
 class Settings(BaseSettings):
@@ -49,10 +49,3 @@ def get_db_url() -> str:
         f"{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
     )
 
-
-def get_files_path() -> str:
-    """Возвращает путь к директории для загрузки файлов, создавая её при необходимости."""
-    upload_dir = settings.UPLOAD_DIR
-    if not os.path.exists(upload_dir):
-        os.makedirs(upload_dir, exist_ok=True)
-    return upload_dir
