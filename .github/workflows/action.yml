@@ -1,0 +1,36 @@
+name: CI
+
+on: [push]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Compose Alias
+        run: sudo ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
+
+      - name: Prepare Files
+        run: touch init-db.sql
+
+      - name: Build and Start Infrastructure
+        run: |
+          make build
+          make up
+          sleep 30
+
+      - name: Debug DB if failed
+        if: failure()
+        run: docker logs filecloud_db
+
+      - name: Run Migrations
+        run: make migrate
+
+      - name: Run Tests
+        run: make test
+
+      - name: Cleanup
+        if: always()
+        run: make clean
