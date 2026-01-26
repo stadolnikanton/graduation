@@ -92,10 +92,8 @@ document
 
       if (response.ok) {
         showAlert("Регистрация успешна! Теперь вы можете войти.", "success");
-        setTimeout(() => {
-          showLoginForm();
-          document.getElementById("login-email").value = email;
-        }, 2000);
+        localStorage.setItem("isAuthenticated", "true");
+        window.location.href = "dashboard.html";
       } else {
         const error = await response.json();
         if (error.detail) {
