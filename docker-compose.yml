@@ -8,18 +8,15 @@ services:
       POSTGRES_DB: filecloud
       POSTGRES_USER: filecloud_user
       POSTGRES_PASSWORD: filecloud_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "5433:5432"
+      - "5432:5432"
     networks:
       - filecloud_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U filecloud_user -d filecloud"]
-      interval: 10s
+      test: [ "CMD-SHELL", "pg_isready -U filecloud_user -d filecloud" ]
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   backend:
     build: ./backend
