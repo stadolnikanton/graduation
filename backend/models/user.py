@@ -1,9 +1,14 @@
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
+
+if TYPE_CHECKING:
+    from .file import File
+    from .token import BlacklistedToken
 
 
 class User(Base):
@@ -35,8 +40,8 @@ class User(Base):
     shared_files_access = relationship(
         "FileShares",
         foreign_keys="[FileShares.user_id]",
-        viewonly=True,  # только для чтения
+        viewonly=True,
     )
 
     def __repr__(self) -> str:
-        return f"User(id={self.id!r}, name={self.name!r}, fullname={self.email!r})"
+        return f"User(id={self.id!r}, name={self.name!r}, email={self.email!r})"

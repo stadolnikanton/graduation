@@ -1,13 +1,15 @@
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, ForeignKey, Integer, String, Enum
+from sqlalchemy import BigInteger, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
-
-from models.user import User
-
 from schemas.file import AccessLevel
+
+if TYPE_CHECKING:
+    from .link import ShareLink
+    from .user import User
 
 
 class File(Base):
@@ -40,7 +42,7 @@ class File(Base):
         "FileShares",
         back_populates="file",
         cascade="all, delete-orphan",
-        lazy="selectin",  # или "joined"
+        lazy="selectin",
     )
 
 
@@ -48,8 +50,8 @@ class FileShares(Base):
     __tablename__ = "file_shares"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    file_id: Mapped[int] = mapped_column(ForeignKey(File.id))
-    user_id: Mapped[int] = mapped_column(ForeignKey(User.id))
+    file_id: Mapped[int] = mapped_column(ForeignKey("files.id"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
     shared_at: Mapped[datetime] = mapped_column(

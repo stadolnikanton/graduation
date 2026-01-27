@@ -1,9 +1,13 @@
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
+
+if TYPE_CHECKING:
+    from .user import User
 
 
 class BlacklistedToken(Base):
@@ -25,4 +29,7 @@ class BlacklistedToken(Base):
     )
 
     def __repr__(self) -> str:
-        return f"BlacklistedToken(id={self.id!r}, jti={self.jti!r}, user_id={self.user_id!r})"
+        return (
+            f"BlacklistedToken(id={self.id!r}, jti={self.jti!r}, "
+            f"user_id={self.user_id!r})"
+        )
