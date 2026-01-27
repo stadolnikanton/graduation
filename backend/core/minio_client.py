@@ -105,4 +105,3 @@ def delete_from_minio(filename, bucket_name):
     except Exception as e:
         print(f"Error deleting file: {e}")
         return False
-

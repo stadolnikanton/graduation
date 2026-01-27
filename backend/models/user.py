@@ -31,13 +31,12 @@ class User(Base):
         lazy="select",
         cascade="all, delete-orphan",
     )
-    
-    shared_files_access = relationship(
-        "FileShares", 
-        foreign_keys="[FileShares.user_id]",
-        viewonly=True  # только для чтения
-    )
 
+    shared_files_access = relationship(
+        "FileShares",
+        foreign_keys="[FileShares.user_id]",
+        viewonly=True,  # только для чтения
+    )
 
     def __repr__(self) -> str:
         return f"User(id={self.id!r}, name={self.name!r}, fullname={self.email!r})"

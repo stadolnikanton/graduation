@@ -70,4 +70,3 @@ async def test_register_same_name(db_connect):
 
     assert response.status_code == 400
     assert response.json() == {"detail": "Username already taken"}
-

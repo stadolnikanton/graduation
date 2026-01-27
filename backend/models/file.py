@@ -15,7 +15,9 @@ class File(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False, unique=False)
-    original_filename: Mapped[str] = mapped_column(String(255), nullable=False, unique=False)
+    original_filename: Mapped[str] = mapped_column(
+        String(255), nullable=False, unique=False
+    )
     type: Mapped[str] = mapped_column(String(), nullable=False)
     owner: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
     path: Mapped[str] = mapped_column(String(), nullable=False)
@@ -25,20 +27,20 @@ class File(Base):
     )
 
     owner_user: Mapped["User"] = relationship("User", back_populates="files")
-    
+
     share_links: Mapped[list["ShareLink"]] = relationship(
-        "ShareLink", 
+        "ShareLink",
         back_populates="file",
         overlaps="file",
-        cascade="all, delete-orphan",  
-        passive_deletes=True
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
     shares: Mapped[list["FileShares"]] = relationship(
         "FileShares",
         back_populates="file",
         cascade="all, delete-orphan",
-        lazy="selectin"  # или "joined"
+        lazy="selectin",  # или "joined"
     )
 
 
@@ -55,9 +57,7 @@ class FileShares(Base):
     )
 
     access_level: Mapped[AccessLevel] = mapped_column(
-        Enum(AccessLevel), 
-        default=AccessLevel.READ, 
-        nullable=False
+        Enum(AccessLevel), default=AccessLevel.READ, nullable=False
     )
 
     file: Mapped["File"] = relationship("File", back_populates="shares")

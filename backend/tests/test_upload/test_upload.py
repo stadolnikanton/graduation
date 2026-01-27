@@ -78,4 +78,3 @@ async def test_upload_multiple_files_unauthorized(db_connect):
     )
 
     assert response.status_code == 401
-

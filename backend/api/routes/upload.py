@@ -43,9 +43,7 @@ async def get_files_user(user: User = Depends(get_current_user)):
                     "type": file.type,
                     "size": file.size,
                     "created_at": (
-                        file.created_at.isoformat()
-                        if file.created_at
-                        else None
+                        file.created_at.isoformat() if file.created_at else None
                     ),
                     "download_url": f"/files/{file.id}/download",
                     "is_owner": True,
@@ -71,9 +69,7 @@ async def get_files_user(user: User = Depends(get_current_user)):
                     "type": file.type,
                     "size": file.size,
                     "created_at": (
-                        file.created_at.isoformat()
-                        if file.created_at
-                        else None
+                        file.created_at.isoformat() if file.created_at else None
                     ),
                     "download_url": f"/files/{file.id}/download",
                     "is_owner": False,
@@ -98,9 +94,7 @@ async def grant_file_access(
     user: User = Depends(get_current_user),
 ):
     async with async_session_maker() as session:
-        result = await session.execute(
-            select(FileModel).where(FileModel.id == file_id)
-        )
+        result = await session.execute(select(FileModel).where(FileModel.id == file_id))
         db_file = result.scalar_one_or_none()
 
         if not db_file:
@@ -112,9 +106,7 @@ async def grant_file_access(
         if data.user_id == user.id:
             raise HTTPException(400, "Нельзя поделиться с самим собой")
 
-        result = await session.execute(
-            select(User).where(User.id == data.user_id)
-        )
+        result = await session.execute(select(User).where(User.id == data.user_id))
         recipient = result.scalar_one_or_none()
 
         if not recipient:
@@ -129,9 +121,7 @@ async def grant_file_access(
         existing_share = result.scalar_one_or_none()
 
         if existing_share:
-            raise HTTPException(
-                409, "Доступ уже предоставлен этому пользователю"
-            )
+            raise HTTPException(409, "Доступ уже предоставлен этому пользователю")
 
         try:
             new_share = FileShares(
@@ -175,9 +165,7 @@ async def get_shared_users(
 
         user_ids = [record.user_id for record in shared_records]
 
-        users_result = await session.execute(
-            select(User).where(User.id.in_(user_ids))
-        )
+        users_result = await session.execute(select(User).where(User.id.in_(user_ids)))
         users = users_result.scalars().all()
 
         users_dict = {user.id: user for user in users}
@@ -205,9 +193,7 @@ async def remove_file_share(
     user: User = Depends(get_current_user),
 ):
     async with async_session_maker() as session:
-        result = await session.execute(
-            select(FileModel).where(FileModel.id == file_id)
-        )
+        result = await session.execute(select(FileModel).where(FileModel.id == file_id))
         db_file = result.scalar_one_or_none()
 
         if not db_file:
@@ -242,9 +228,7 @@ async def remove_file_share(
 @router.get("/{file_id}/download")
 async def download_file(file_id: int, user: User = Depends(get_current_user)):
     async with async_session_maker() as session:
-        result = await session.execute(
-            select(FileModel).where(FileModel.id == file_id)
-        )
+        result = await session.execute(select(FileModel).where(FileModel.id == file_id))
         db_file = result.scalar_one_or_none()
 
         if not db_file:
@@ -260,9 +244,7 @@ async def download_file(file_id: int, user: User = Depends(get_current_user)):
             access_file = result.scalar_one_or_none()
 
             if not access_file:
-                raise HTTPException(
-                    status_code=403, detail="Нет доступа к файлу"
-                )
+                raise HTTPException(status_code=403, detail="Нет доступа к файлу")
 
     file_response = download_from_minio(
         db_file.name, settings.MINIO_BUCKET_NAME, db_file.original_filename
@@ -288,14 +270,10 @@ async def delete_file(file_id: int, user: User = Depends(get_current_user)):
         if file.owner != user.id:
             raise HTTPException(status_code=403, detail="Access denied")
 
-        delete_links_stmt = delete(ShareLink).where(
-            ShareLink.file_id == file_id
-        )
+        delete_links_stmt = delete(ShareLink).where(ShareLink.file_id == file_id)
         await session.execute(delete_links_stmt)
 
-        delete_success = delete_from_minio(
-            file.name, settings.MINIO_BUCKET_NAME
-        )
+        delete_success = delete_from_minio(file.name, settings.MINIO_BUCKET_NAME)
         if not delete_success:
             raise HTTPException(
                 status_code=500, detail="Failed to delete file from storage"
@@ -347,9 +325,7 @@ async def create_file(
             )
 
         file.file.seek(0)
-        success = upload_file(
-            file, unique_filename, settings.MINIO_BUCKET_NAME
-        )
+        success = upload_file(file, unique_filename, settings.MINIO_BUCKET_NAME)
 
         if not success:
             raise HTTPException(
@@ -452,16 +428,12 @@ async def create_files(
                         if not result.scalar_one_or_none():
                             break
                         counter += 1
-                        new_filename = (
-                            f"{base_name} ({counter}){file_extension}"
-                        )
+                        new_filename = f"{base_name} ({counter}){file_extension}"
 
                     file.filename = new_filename
 
             file.file.seek(0)
-            success = upload_file(
-                file, unique_filename, settings.MINIO_BUCKET_NAME
-            )
+            success = upload_file(file, unique_filename, settings.MINIO_BUCKET_NAME)
 
             if not success:
                 results.append(

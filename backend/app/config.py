@@ -48,4 +48,3 @@ def get_db_url() -> str:
         f"{settings.DB_PASSWORD.get_secret_value()}@"
         f"{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
     )
-

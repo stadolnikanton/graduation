@@ -39,4 +39,3 @@ async def test_refresh_token(db_connect):
 
     assert response.status_code == 200
     assert response.json() == {"status": 200}
-

@@ -1,9 +1,11 @@
 """Инициализирует MinIO bucket при старте приложения"""
+
 import logging
 from .minio_client import ensure_bucket_exists
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
 
 def init_minio():
     try:

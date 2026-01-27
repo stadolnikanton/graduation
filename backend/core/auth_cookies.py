@@ -20,7 +20,7 @@ def set_auth_cookies(
     access_token: str,
     refresh_token: str,
     secure: bool | None = None,
-    path: str = COOKIE_PATH
+    path: str = COOKIE_PATH,
 ) -> None:
     use_secure = secure if secure is not None else SECURE
 
@@ -47,10 +47,7 @@ def set_auth_cookies(
     logger.debug(f"Auth cookies set for path: {path}")
 
 
-def delete_auth_cookies(
-        response: Response,
-        path: str = COOKIE_PATH
-) -> None:
+def delete_auth_cookies(response: Response, path: str = COOKIE_PATH) -> None:
     response.delete_cookie(key="access_token", path=path)
     response.delete_cookie(key="refresh_token", path=path)
 
@@ -63,7 +60,7 @@ def set_auth_cookies_with_user_data(
     refresh_token: str,
     user_data: Dict[str, Any],
     secure: Optional[bool] = None,
-    path: str = COOKIE_PATH
+    path: str = COOKIE_PATH,
 ) -> None:
     set_auth_cookies(response, access_token, refresh_token, secure, path)
 
@@ -90,4 +87,5 @@ def set_auth_cookies_with_user_data(
         )
 
     logger.debug(
-        f"Auth cookies with user data set for user: {user_data.get('user_id')}")
+        f"Auth cookies with user data set for user: {user_data.get('user_id')}"
+    )

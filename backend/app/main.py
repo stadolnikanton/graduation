@@ -13,21 +13,23 @@ async def lifespan(app: FastAPI):
     Контекстный менеджер для управления жизненным циклом приложения.
     Выполняется при старте и завершении работы приложения.
     """
-    
+
     print("🚀 Starting FileCloud application...")
-    
+
     minio_success = init_minio()
     if minio_success:
-        print(f"✅ MinIO bucket '{settings.MINIO_BUCKET_NAME}' initialized successfully")
+        print(
+            f"✅ MinIO bucket '{settings.MINIO_BUCKET_NAME}' initialized successfully"
+        )
     else:
         print(f"❌ Failed to initialize MinIO bucket '{settings.MINIO_BUCKET_NAME}'")
-    
+
     print(f"📊 Database: {settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}")
     print(f"📁 File storage: MinIO at {settings.MINIO_ENDPOINT}:9000")
     print("✅ Application startup complete")
-    
+
     yield
-    
+
     print("🛑 Shutting down FileCloud application...")
 
 
@@ -35,7 +37,7 @@ app = FastAPI(
     title="FileCloud API",
     description="Cloud file storage and sharing service",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 
@@ -68,7 +70,7 @@ async def root():
         "version": "1.0.0",
         "status": "running",
         "docs": "/docs",
-        "redoc": "/redoc"
+        "redoc": "/redoc",
     }
 
 
@@ -77,15 +79,11 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "filecloud-backend",
-        "timestamp": "current_time"
+        "timestamp": "current_time",
     }
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True
-    )
+
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
