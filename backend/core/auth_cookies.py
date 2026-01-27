@@ -15,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 def set_auth_cookies(
-        response: Response,
-        access_token: str,
-        refresh_token: str,
-        secure: bool | None = None,
-        path: str = COOKIE_PATH,
+    response: Response,
+    access_token: str,
+    refresh_token: str,
+    secure: bool | None = None,
+    path: str = COOKIE_PATH,
 ) -> None:
     use_secure = secure if secure is not None else SECURE
 
@@ -54,12 +54,12 @@ def delete_auth_cookies(response: Response, path: str = COOKIE_PATH) -> None:
 
 
 def set_auth_cookies_with_user_data(
-        response: Response,
-        access_token: str,
-        refresh_token: str,
-        user_data: Dict[str, Any],
-        secure: Optional[bool] = None,
-        path: str = COOKIE_PATH,
+    response: Response,
+    access_token: str,
+    refresh_token: str,
+    user_data: Dict[str, Any],
+    secure: Optional[bool] = None,
+    path: str = COOKIE_PATH,
 ) -> None:
     set_auth_cookies(response, access_token, refresh_token, secure, path)
 
