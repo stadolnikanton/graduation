@@ -3,7 +3,28 @@ name: CI
 on: [push]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+
+      - name: Install linting tools
+        run: pip install flake8 black
+
+      - name: Run Black (Check formatting)
+        run: black --check .
+
+      - name: Run Flake8 (Check logic/style)
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
   tests:
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
