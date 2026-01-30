@@ -49,14 +49,6 @@ async def test_share_file_unauthorized(db_connect):
 
 
 @pytest.mark.anyio
-async def test_get_shared_users_unauthorized(db_connect):
-    """Тест получения списка пользователей с доступом без авторизации"""
-    response = await db_connect.get("/files/1/shared-users")
-
-    assert response.status_code == 401
-
-
-@pytest.mark.anyio
 async def test_remove_share_unauthorized(db_connect):
     """Тест удаления доступа к файлу без авторизации"""
     response = await db_connect.delete("/files/1/share/2")

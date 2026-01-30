@@ -1,14 +1,12 @@
 import hashlib
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-from app.db import async_session_maker
 from core.auth_cookies import delete_auth_cookies, set_auth_cookies
-from core.deps import get_current_user
 from core.secure import (
     create_access_token,
     create_refresh_token,
@@ -19,11 +17,11 @@ from core.secure import (
 from core.deps import get_db
 from models.token import BlacklistedToken
 from models.user import User
-from schemas.token import LoginRequest
-from schemas.user import UserCreate
 
 
 class Authentication:
+    """Класс контроллер для аутентификации"""
+
     def __init__(self, session: AsyncSession = Depends(get_db())):
         self.session = session
 

@@ -1,22 +1,6 @@
-import hashlib
-from datetime import datetime
-
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-
-
-from app.db import async_session_maker
-from core.auth_cookies import delete_auth_cookies, set_auth_cookies
 from core.deps import get_current_user, get_db
-from core.secure import (
-    create_access_token,
-    create_refresh_token,
-    get_password_hash,
-    verify_password,
-    verify_token,
-)
-from models.token import BlacklistedToken
 from models.user import User
 from schemas.token import LoginRequest
 from schemas.user import UserCreate
@@ -68,7 +52,10 @@ async def logout(
     auth = Authentication(session)
     await auth.logout(request, response, current_user)
 
-    return {"status": 200, "message": "Logged out successfully",}
+    return {
+        "status": 200,
+        "message": "Logged out successfully",
+    }
 
 
 @router.get("/me")
@@ -78,5 +65,4 @@ async def get_current_user_info(
 ):
     auth = Authentication(session)
 
-    response = await auth.get_current_user(current_user)
-    return response
+    return await auth.get_current_user(current_user)
