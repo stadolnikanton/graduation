@@ -1,5 +1,6 @@
 import os
 import uuid
+import anyio
 
 from app.config import settings
 from core.minio_client import (
@@ -273,10 +274,7 @@ class Upload:
         }
 
     async def create_file(self, file, user):
-
-        content = await file.read()
-
-        if len(content) > self.MAX_FILE_SIZE:
+        if file.size > self.MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=413,
                 detail=f"Файл слишком большой. Максимальный размер: {self.MAX_FILE_SIZE // (1024 * 1024)}MB",
@@ -292,34 +290,33 @@ class Upload:
             select(FileModel).where(
                 FileModel.owner == user.id,
                 FileModel.original_filename == file.filename,
-            )
+                )
         )
-        existing_file = result.scalar_one_or_none()
 
-        if existing_file:
+        if result.scalar_one_or_none():
             raise HTTPException(
                 status_code=409,
                 detail=f"Файл с именем '{file.filename}' уже существует у вас",
             )
 
-        file.file.seek(0)
-        success = upload_file(file, unique_filename, settings.MINIO_BUCKET_NAME)
+        await file.seek(0)
+        success = await anyio.to_thread.run_sync(
+            upload_file, file, unique_filename, settings.MINIO_BUCKET_NAME
+        )
 
         if not success:
             raise HTTPException(
                 status_code=500, detail="Ошибка при загрузке файла в хранилище"
             )
 
-        file_data = {
-            "name": unique_filename,
-            "original_filename": file.filename,
-            "type": file.content_type or "application/octet-stream",
-            "owner": user.id,
-            "path": str(file_path),
-            "size": len(content),
-        }
-
-        db_file = FileModel(**file_data)
+        db_file = FileModel(
+            name=unique_filename,
+            original_filename=file.filename,
+            type=file.content_type or "application/octet-stream",
+            owner=user.id,
+            path=str(file_path),
+            size=file.size,
+        )
         self.session.add(db_file)
         await self.session.commit()
         await self.session.refresh(db_file)
@@ -329,29 +326,14 @@ class Upload:
             "file_id": db_file.id,
             "filename": file.filename,
             "saved_as": unique_filename,
-            "size": len(content),
+            "size": file.size,
             "download_url": f"/files/{db_file.id}/download",
             "minio_url": file_path,
         }
 
     async def create_files(self, files, user):
-        total_size = 0
+        total_size = sum(f.size for f in files)
         results = []
-
-        for file in files:
-            content = await file.read()
-            await file.seek(0)
-
-            if len(content) > self.MAX_FILE_SIZE:
-                results.append(
-                    {
-                        "status": "error",
-                        "filename": file.filename,
-                        "error": f"Файл слишком большой. Максимум: {self.MAX_FILE_SIZE // (1024 * 1024)}MB",
-                    }
-                )
-                continue
-            total_size += len(content)
 
         if total_size > self.MAX_TOTAL_SIZE:
             raise HTTPException(
@@ -362,14 +344,15 @@ class Upload:
         ensure_bucket_exists(settings.MINIO_BUCKET_NAME)
 
         for file in files:
-            if any(
-                r.get("filename") == file.filename and r["status"] == "error"
-                for r in results
-            ):
+            if file.size > self.MAX_FILE_SIZE:
+                results.append({
+                    "status": "error",
+                    "filename": file.filename,
+                    "error": f"Файл слишком большой. Максимум: {self.MAX_FILE_SIZE // (1024 * 1024)}MB",
+                })
                 continue
 
             try:
-                content = await file.read()
                 file_extension = os.path.splitext(file.filename)[1].lower()
                 unique_filename = f"{uuid.uuid4()}{file_extension}"
                 file_path = f"http://{settings.MINIO_ENDPOINT}:9000/{settings.MINIO_BUCKET_NAME}/{unique_filename}"
@@ -378,7 +361,7 @@ class Upload:
                     select(FileModel).where(
                         FileModel.owner == user.id,
                         FileModel.original_filename == file.filename,
-                    )
+                        )
                 )
 
                 if result.scalar_one_or_none():
@@ -390,7 +373,7 @@ class Upload:
                             select(FileModel).where(
                                 FileModel.owner == user.id,
                                 FileModel.original_filename == new_filename,
-                            )
+                                )
                         )
                         if not res.scalar_one_or_none():
                             file.filename = new_filename
@@ -398,16 +381,12 @@ class Upload:
                         counter += 1
 
                 await file.seek(0)
-                success = upload_file(file, unique_filename, settings.MINIO_BUCKET_NAME)
+                success = await anyio.to_thread.run_sync(
+                    upload_file, file, unique_filename, settings.MINIO_BUCKET_NAME
+                )
 
                 if not success:
-                    results.append(
-                        {
-                            "status": "error",
-                            "filename": file.filename,
-                            "error": "Ошибка при загрузке",
-                        }
-                    )
+                    results.append({"status": "error", "filename": file.filename, "error": "Ошибка при загрузке"})
                     continue
 
                 db_file = FileModel(
@@ -416,28 +395,24 @@ class Upload:
                     type=file.content_type or "application/octet-stream",
                     owner=user.id,
                     path=str(file_path),
-                    size=len(content),
+                    size=file.size,
                 )
                 self.session.add(db_file)
                 await self.session.commit()
                 await self.session.refresh(db_file)
 
-                results.append(
-                    {
-                        "status": "success",
-                        "file_id": db_file.id,
-                        "filename": file.filename,
-                        "saved_as": unique_filename,
-                        "size": len(content),
-                        "download_url": f"/files/{db_file.id}/download",
-                    }
-                )
+                results.append({
+                    "status": "success",
+                    "file_id": db_file.id,
+                    "filename": file.filename,
+                    "saved_as": unique_filename,
+                    "size": file.size,
+                    "download_url": f"/files/{db_file.id}/download",
+                })
 
             except Exception as e:
                 await self.session.rollback()
-                results.append(
-                    {"status": "error", "filename": file.filename, "error": str(e)}
-                )
+                results.append({"status": "error", "filename": file.filename, "error": str(e)})
 
         return {
             "total_files": len(files),
