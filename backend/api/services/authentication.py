@@ -22,7 +22,7 @@ from models.user import User
 class Authentication:
     """Класс контроллер для аутентификации"""
 
-    def __init__(self, session: AsyncSession = Depends(get_db())):
+    def __init__(self, session):
         self.session = session
 
     async def login(self, user_data, response):
