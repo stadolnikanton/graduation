@@ -3,10 +3,12 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 
 from app.db import async_session_maker
 from core.auth_cookies import delete_auth_cookies, set_auth_cookies
-from core.deps import get_current_user
+from core.deps import get_current_user, get_db
 from core.secure import (
     create_access_token,
     create_refresh_token,
@@ -19,6 +21,9 @@ from models.user import User
 from schemas.token import LoginRequest
 from schemas.user import UserCreate
 
+
+from api.services.authentication import Authentication
+
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
@@ -26,100 +31,31 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register(
     user_data: UserCreate,
     response: Response,
+    session: AsyncSession = Depends(get_db),
 ):
-    async with async_session_maker() as session:
-        email_exists = await session.execute(
-            select(User).where(User.email == user_data.email)
-        )
-        if email_exists.scalar_one_or_none():
-            raise HTTPException(400, "Email already registered")
+    auth = Authentication(session)
+    await auth.register(user_data, response)
 
-        username_exists = await session.execute(
-            select(User).where(User.name == user_data.name)
-        )
-        if username_exists.scalar_one_or_none():
-            raise HTTPException(400, "Username already taken")
-
-        user = User(
-            name=user_data.name,
-            email=user_data.email,
-            password=get_password_hash(user_data.password),
-        )
-
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
-
-        access_token = create_access_token(data={"sub": str(user.id)})
-        refresh_token = create_refresh_token(data={"sub": str(user.id)})
-
-        set_auth_cookies(response, access_token, refresh_token)
-
-        return {
-            "status": 200,
-        }
+    return {"status": "ok"}
 
 
 @router.post("/login")
 async def login(
-    user_data: LoginRequest,
-    response: Response,
+    user_data: LoginRequest, response: Response, session: AsyncSession = Depends(get_db)
 ):
-    async with async_session_maker() as session:
-        result = await session.execute(
-            select(User).where(User.email == user_data.email)
-        )
+    auth = Authentication(session)
+    await auth.login(user_data, response)
 
-        user = result.scalar_one_or_none()
-
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-
-        if not verify_password(user_data.password, user.password):
-            raise HTTPException(status_code=401, detail="Incorrect password")
-
-        access_token = create_access_token(data={"sub": str(user.id)})
-        refresh_token = create_refresh_token(data={"sub": str(user.id)})
-
-        set_auth_cookies(response, access_token, refresh_token)
-
-        return {
-            "status": 200,
-        }
+    return {"status": "200"}
 
 
 @router.post("/refresh")
 async def refresh(
-    request: Request,
-    response: Response,
+    request: Request, response: Response, session: AsyncSession = Depends(get_db)
 ):
-    refresh_token = request.cookies.get("refresh_token")
-
-    payload = verify_token(refresh_token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    if payload.get("type") != "refresh":
-        raise HTTPException(status_code=422, detail="Not a refresh token")
-
-    user_id = int(payload.get("sub"))
-
-    async with async_session_maker() as session:
-        result = await session.execute(select(User).where(User.id == user_id))
-
-        user = result.scalar_one_or_none()
-
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-
-        access_token = create_access_token(data={"sub": str(user.id)})
-        refresh_token = create_refresh_token(data={"sub": str(user.id)})
-
-        set_auth_cookies(response, access_token, refresh_token)
-
-        return {
-            "status": 200,
-        }
+    auth = Authentication(session)
+    await auth.refresh(request, response)
+    return {"status": "200"}
 
 
 @router.post("/logout")
@@ -127,44 +63,20 @@ async def logout(
     request: Request,
     response: Response,
     current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ):
-    async with async_session_maker() as session:
-        refresh_token = request.cookies.get("refresh_token")
+    auth = Authentication(session)
+    await auth.logout(request, response, current_user)
 
-        if refresh_token:
-            payload = verify_token(refresh_token)
-
-            if payload:
-                jti = payload.get("jti")
-
-                if jti is None:
-                    jti = hashlib.sha256(refresh_token.encode()).hexdigest()[:36]
-
-                token_type = payload.get("type", "refresh")
-                exp = payload.get("exp")
-
-                blacklisted_token = BlacklistedToken(
-                    jti=jti,
-                    user_id=current_user.id,
-                    token_type=token_type,
-                    expires_at=datetime.fromtimestamp(exp),
-                    reason="logout",
-                )
-                session.add(blacklisted_token)
-                await session.commit()
-
-        delete_auth_cookies(response)
-
-        return {"status": 200, "message": "Logged out successfully"}
+    return {"status": "200"}
 
 
 @router.get("/me")
-async def get_current_user_info(current_user: User = Depends(get_current_user)):
-    return {
-        "id": current_user.id,
-        "name": current_user.name,
-        "email": current_user.email,
-        "created_at": (
-            current_user.created_at.isoformat() if current_user.created_at else None
-        ),
-    }
+async def get_current_user_info(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+):
+    auth = Authentication(session)
+
+    response = await auth.get_current_user(current_user)
+    return response

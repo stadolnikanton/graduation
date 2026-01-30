@@ -1,7 +1,9 @@
 from fastapi import HTTPException, status, Request, Response
 from typing import Optional, Dict, Any
 
+from fastapi.params import Depends
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import async_session_maker
 
@@ -14,6 +16,11 @@ from core.auth_cookies import (
     delete_auth_cookies,
     set_auth_cookies_with_user_data,
 )
+
+
+async def get_db():
+    async with async_session_maker() as session:
+        yield session
 
 
 class AuthCookies:
@@ -74,7 +81,9 @@ def get_auth_cookies(response: Response) -> AuthCookies:
     return AuthCookies(response)
 
 
-async def get_current_user(request: Request) -> Dict:
+async def get_current_user(
+    request: Request, session: AsyncSession = Depends(get_db)
+) -> Dict:
     access_token = request.cookies.get("access_token")
 
     if not access_token:
@@ -96,14 +105,13 @@ async def get_current_user(request: Request) -> Dict:
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
 
-    async with async_session_maker() as session:
-        stmt = select(User).where(User.id == int(user_id))
-        result = await session.execute(stmt)
-        user = result.scalar_one_or_none()
+    stmt = select(User).where(User.id == int(user_id))
+    result = await session.execute(stmt)
+    user = result.scalar_one_or_none()
 
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-            )
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
 
     return user
