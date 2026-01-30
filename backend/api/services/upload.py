@@ -290,7 +290,7 @@ class Upload:
             select(FileModel).where(
                 FileModel.owner == user.id,
                 FileModel.original_filename == file.filename,
-                )
+            )
         )
 
         if result.scalar_one_or_none():
@@ -345,11 +345,13 @@ class Upload:
 
         for file in files:
             if file.size > self.MAX_FILE_SIZE:
-                results.append({
-                    "status": "error",
-                    "filename": file.filename,
-                    "error": f"Файл слишком большой. Максимум: {self.MAX_FILE_SIZE // (1024 * 1024)}MB",
-                })
+                results.append(
+                    {
+                        "status": "error",
+                        "filename": file.filename,
+                        "error": f"Файл слишком большой. Максимум: {self.MAX_FILE_SIZE // (1024 * 1024)}MB",
+                    }
+                )
                 continue
 
             try:
@@ -361,7 +363,7 @@ class Upload:
                     select(FileModel).where(
                         FileModel.owner == user.id,
                         FileModel.original_filename == file.filename,
-                        )
+                    )
                 )
 
                 if result.scalar_one_or_none():
@@ -373,7 +375,7 @@ class Upload:
                             select(FileModel).where(
                                 FileModel.owner == user.id,
                                 FileModel.original_filename == new_filename,
-                                )
+                            )
                         )
                         if not res.scalar_one_or_none():
                             file.filename = new_filename
@@ -386,7 +388,13 @@ class Upload:
                 )
 
                 if not success:
-                    results.append({"status": "error", "filename": file.filename, "error": "Ошибка при загрузке"})
+                    results.append(
+                        {
+                            "status": "error",
+                            "filename": file.filename,
+                            "error": "Ошибка при загрузке",
+                        }
+                    )
                     continue
 
                 db_file = FileModel(
@@ -401,18 +409,22 @@ class Upload:
                 await self.session.commit()
                 await self.session.refresh(db_file)
 
-                results.append({
-                    "status": "success",
-                    "file_id": db_file.id,
-                    "filename": file.filename,
-                    "saved_as": unique_filename,
-                    "size": file.size,
-                    "download_url": f"/files/{db_file.id}/download",
-                })
+                results.append(
+                    {
+                        "status": "success",
+                        "file_id": db_file.id,
+                        "filename": file.filename,
+                        "saved_as": unique_filename,
+                        "size": file.size,
+                        "download_url": f"/files/{db_file.id}/download",
+                    }
+                )
 
             except Exception as e:
                 await self.session.rollback()
-                results.append({"status": "error", "filename": file.filename, "error": str(e)})
+                results.append(
+                    {"status": "error", "filename": file.filename, "error": str(e)}
+                )
 
         return {
             "total_files": len(files),

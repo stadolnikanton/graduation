@@ -14,6 +14,7 @@ from models.link import ShareLink
 
 class Share:
     """Класс контроллер для управления ссылками доступа"""
+
     def __init__(self, session):
         self.session = session
 
