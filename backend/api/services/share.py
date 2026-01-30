@@ -3,16 +3,13 @@ from datetime import datetime, timedelta
 
 from sqlalchemy.future import select
 
-from fastapi import APIRouter, Form, HTTPException, Depends
+from fastapi import HTTPException
 
-from app.db import async_session_maker
-from core.deps import get_current_user
 from core.minio_client import download_from_minio
 from app.config import settings
 
 from models.file import File as FileModel
 from models.link import ShareLink
-from models.user import User
 
 
 class Share:
