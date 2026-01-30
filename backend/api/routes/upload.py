@@ -36,7 +36,7 @@ async def grant_file_access(
 async def get_shared_users(file_id: int, session: AsyncSession = Depends(get_db)):
     upload = Upload(session)
 
-    return upload.get_shared_users(file_id)
+    return await upload.get_shared_users(file_id)
 
 
 @router.delete("/{file_id}/share/{user_id}")
@@ -47,7 +47,7 @@ async def remove_file_share(
     session: AsyncSession = Depends(get_db),
 ):
     upload = Upload(session)
-    return upload.remove_file_share(file_id, user_id, user)
+    return await upload.remove_file_share(file_id, user_id, user)
 
 
 @router.get("/{file_id}/download")
@@ -57,7 +57,7 @@ async def download_file(
     session: AsyncSession = Depends(get_db),
 ):
     upload = Upload(session)
-    return upload.download_file(file_id, user)
+    return await upload.download_file(file_id, user)
 
 
 @router.delete("/{file_id}")
@@ -67,7 +67,7 @@ async def delete_file(
     session: AsyncSession = Depends(get_db),
 ):
     upload = Upload(session)
-    return upload.delete_file(file_id, user)
+    return await upload.delete_file(file_id, user)
 
 
 @router.post("/upload")
@@ -77,7 +77,7 @@ async def create_file(
     session: AsyncSession = Depends(get_db),
 ):
     upload = Upload(session)
-    return upload.create_file(file, user)
+    return await upload.create_file(file, user)
 
 
 @router.post("/upload/multiple")
@@ -87,4 +87,4 @@ async def create_files(
     session: AsyncSession = Depends(get_db),
 ):
     upload = Upload(session)
-    return upload.create_files(files, user)
+    return await upload.create_files(files, user)

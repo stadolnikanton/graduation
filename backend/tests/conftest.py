@@ -29,3 +29,19 @@ async def db_connect():
         transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
         yield ac
+
+
+@pytest.fixture
+async def auth_client(db_connect):
+    """Фикстура для тестов, требующих авторизации"""
+    user_data = {
+        "name": "test_user",
+        "email": "test@example.com",
+        "password": "Password123",
+        "password_confirm": "Password123",
+    }
+    await db_connect.post("/auth/register", json=user_data)
+    await db_connect.post(
+        "/auth/login", json={"email": "test@example.com", "password": "Password123"}
+    )
+    return db_connect
