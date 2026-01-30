@@ -18,7 +18,7 @@ async def get_files_user(
 ):
     upload = Upload(session)
 
-    return await Upload.get_files_user(user)
+    return await upload.get_files_user(user)
 
 
 @router.post("/{file_id}/share")
