@@ -1,22 +1,18 @@
 import os
 import uuid
-from typing import List
 
 from app.config import settings
-from app.db import async_session_maker
-from core.deps import get_current_user
 from core.minio_client import (
     delete_from_minio,
     download_from_minio,
     ensure_bucket_exists,
     upload_file,
 )
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import HTTPException
 from models.file import File as FileModel
 from models.file import FileShares
 from models.link import ShareLink
 from models.user import User
-from schemas.file import ShareRequest
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 
