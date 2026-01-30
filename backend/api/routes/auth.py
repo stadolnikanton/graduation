@@ -36,7 +36,7 @@ async def register(
     auth = Authentication(session)
     await auth.register(user_data, response)
 
-    return {"status": "ok"}
+    return {"status": 200}
 
 
 @router.post("/login")
@@ -46,7 +46,7 @@ async def login(
     auth = Authentication(session)
     await auth.login(user_data, response)
 
-    return {"status": "200"}
+    return {"status": 200}
 
 
 @router.post("/refresh")
@@ -55,7 +55,7 @@ async def refresh(
 ):
     auth = Authentication(session)
     await auth.refresh(request, response)
-    return {"status": "200"}
+    return {"status": 200}
 
 
 @router.post("/logout")
@@ -68,7 +68,7 @@ async def logout(
     auth = Authentication(session)
     await auth.logout(request, response, current_user)
 
-    return {"status": "200"}
+    return {"status": 200, "message": "Logged out successfully",}
 
 
 @router.get("/me")
