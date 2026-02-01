@@ -91,7 +91,7 @@ document
       });
 
       if (response.ok) {
-        showAlert("Регистрация успешна! Теперь вы можете войти.", "success");
+        showAlert("Регистрация успешна!", "success");
         localStorage.setItem("isAuthenticated", "true");
         window.location.href = "dashboard.html";
       } else {
