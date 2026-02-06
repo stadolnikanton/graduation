@@ -75,7 +75,6 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ssh.stadolnik.site >> ~/.ssh/known_hosts || true
-
       - name: Deploy via SSH + Cloudflare Tunnel
         env:
           SSH_HOST: ssh.stadolnik.site
