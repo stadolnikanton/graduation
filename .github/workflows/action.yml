@@ -61,15 +61,22 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
+      - name: Install Cloudflare Client
+        run: |
+          curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared.deb
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Executing remote ssh commands using password
+      - name: Deploy via Cloudflare Tunnel
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ssh.stadolnik.site
           username: duck
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+          proxy_command: /usr/local/bin/cloudflared access ssh --hostname %h
+
           script: |
             cd /home/duck/Dev/Python/graduation
             git pull origin main
