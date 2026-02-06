@@ -73,7 +73,7 @@ class Authentication:
 
         set_auth_cookies(response, access_token, refresh_token)
 
-        return
+        return None
 
     async def refresh(self, request, response):
         refresh_token = request.cookies.get("refresh_token")
@@ -99,7 +99,7 @@ class Authentication:
 
         set_auth_cookies(response, access_token, refresh_token)
 
-        return
+        return None
 
     async def logout(self, request, response, current_user):
         refresh_token = request.cookies.get("refresh_token")
@@ -128,7 +128,7 @@ class Authentication:
 
         delete_auth_cookies(response)
 
-        return
+        return None
 
     async def get_current_user(self, current_user):
         return {

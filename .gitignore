@@ -8,3 +8,4 @@ static/
 .pytest_cache/
 .idea/
 init-db.sql/
+.env

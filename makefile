@@ -20,47 +20,47 @@ help:
 	@echo ""
 
 build:
-	docker-compose build --no-cache
+	docker compose build
 
 up:
-	docker-compose up -d
+	docker compose up -d
 
 start:
-	docker-compose start
+	docker compose start
 
 stop:
-	docker-compose stop
+	docker compose stop
 
 restart:
-	docker-compose restart
+	docker compose restart
 
 down:
-	docker-compose down
+	docker compose down
 
 logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 clean:
-	docker-compose down -v --remove-orphans
+	docker compose down -v --remove-orphans
 	docker system prune -f --volumes
 
 migrate:
-	docker-compose exec backend alembic upgrade head
+	docker compose exec backend alembic upgrade head
 
 migrate-create:
-	docker-compose exec backend alembic revision --autogenerate -m "$(message)"
+	docker compose exec backend alembic revision --autogenerate -m "$(message)"
 
 test:
-	docker-compose exec backend pytest
+	docker compose exec backend pytest
 
 shell:
-	docker-compose exec backend bash
+	docker compose exec backend bash
 
 db-shell:
-	docker-compose exec postgres psql -U filecloud_user -d filecloud
+	docker compose exec postgres psql -U filecloud_user -d filecloud
 
 status:
-	docker-compose ps
+	docker compose ps
 
 volumes:
 	docker volume ls

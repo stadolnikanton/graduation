@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8000';
+const API_BASE = "";
 let currentUser = null;
 let filesData = null;
 let currentFileTab = 'owned';
@@ -35,10 +35,21 @@ async function loadUserProfile() {
 
         if (response.ok) {
             currentUser = await response.json();
-            document.getElementById('user-name').textContent = currentUser.name;
+            console.log("Данные профиля получены:", currentUser);
+
+            // Обновляем основные поля
+            if (currentUser.name) {
+                document.getElementById('user-name').textContent = currentUser.name;
+                document.getElementById('user-initials').textContent = currentUser.name.charAt(0).toUpperCase();
+            }
+
             document.getElementById('user-email').textContent = currentUser.email;
-            document.getElementById('user-initials').textContent =
-                currentUser.name.charAt(0).toUpperCase();
+
+            // Обновляем ID (с приведением к строке)
+            const idElement = document.getElementById('user-id');
+            if (idElement) {
+                idElement.textContent = String(currentUser.id);
+            }
         }
     } catch (error) {
         console.error('Failed to load user profile:', error);
@@ -107,16 +118,16 @@ function renderFiles() {
                     <div class="col">
                         <h5 class="mb-1">${file.original_filename || file.filename || file.name}</h5>
                         <p class="text-muted mb-1">
-                            ${formatFileSize(file.size)} • 
+                            ${formatFileSize(file.size)} •
                             ${new Date(file.created_at || file.uploaded_at).toLocaleDateString()}
                         </p>
                         ${file.shared_file || file.is_shared ?
-            '<span class="badge bg-primary">Доступ</span>' :
-            '<span class="badge bg-success">Владелец</span>'
-        }
+        '<span class="badge bg-primary">Доступ</span>' :
+        '<span class="badge bg-success">Владелец</span>'
+    }
                     </div>
                     <div class="col-auto">
-                        <button class="btn btn-sm btn-outline-primary" 
+                        <button class="btn btn-sm btn-outline-primary"
                                 onclick="event.stopPropagation(); downloadFile(${file.id})">
                             <i class="bi bi-download"></i>
                         </button>
@@ -467,9 +478,9 @@ async function uploadFiles() {
                         <div class="alert alert-${file.status === 'success' ? 'success' : 'danger'}">
                             <h6>${file.filename || file.name}</h6>
                             ${file.status === 'success' ?
-                            `<p class="mb-0">Размер: ${formatFileSize(file.size)}</p>` :
-                            `<p class="mb-0">Ошибка: ${file.error || 'Неизвестная ошибка'}</p>`
-                        }
+                        `<p class="mb-0">Размер: ${formatFileSize(file.size)}</p>` :
+                        `<p class="mb-0">Ошибка: ${file.error || 'Неизвестная ошибка'}</p>`
+                    }
                         </div>
                     `).join('');
                 }
@@ -488,17 +499,17 @@ async function uploadFiles() {
 
 async function downloadFile(fileId) {
     console.log('Скачивание файла с ID:', fileId);
-    
+
     try {
         // Используем API endpoint для скачивания
         const downloadUrl = `${API_BASE}/files/${fileId}/download`;
         console.log('Используется URL:', downloadUrl);
-        
+
         // Открываем в новом окне
         window.open(downloadUrl, '_blank');
-        
+
         showToast('Начато скачивание файла', 'success');
-        
+
     } catch (error) {
         console.error('Ошибка при скачивании файла:', error);
         showToast('Ошибка скачивания файла', 'error');
@@ -507,7 +518,7 @@ async function downloadFile(fileId) {
 
 function openFileActions(fileId) {
     console.log('openFileActions вызвана с fileId:', fileId, 'тип:', typeof fileId);
-    
+
     const file = findFileById(fileId);
     if (!file) {
         console.error('Файл не найден, fileId:', fileId);
@@ -537,7 +548,7 @@ function openFileActions(fileId) {
             <p><strong>Дата создания:</strong> ${file.created_at ? new Date(file.created_at).toLocaleString() : 'Неизвестно'}</p>
             <p><strong>Статус:</strong> ${isOwner ? 'Владелец' : 'Доступ предоставлен'}</p>
         </div>
-        
+
         <div class="d-grid gap-2">
             <button class="btn btn-primary" id="modalDownloadBtn" data-file-id="${fileId}">
                 <i class="bi bi-download me-2"></i>Скачать файл
@@ -560,12 +571,12 @@ function openFileActions(fileId) {
     const modalContent = document.getElementById('fileModalContent');
     if (modalContent) {
         modalContent.innerHTML = content;
-        
+
         setTimeout(() => {
             const downloadBtn = document.getElementById('modalDownloadBtn');
             const shareBtn = document.getElementById('modalShareBtn');
             const deleteBtn = document.getElementById('modalDeleteBtn');
-            
+
             if (downloadBtn) {
                 downloadBtn.addEventListener('click', function() {
                     const fileId = this.getAttribute('data-file-id');
@@ -573,7 +584,7 @@ function openFileActions(fileId) {
                     modal.hide();
                 });
             }
-            
+
             if (shareBtn) {
                 shareBtn.addEventListener('click', function() {
                     const fileId = this.getAttribute('data-file-id');
@@ -585,7 +596,7 @@ function openFileActions(fileId) {
                     }, 300);
                 });
             }
-            
+
             if (deleteBtn) {
                 deleteBtn.addEventListener('click', function() {
                     const fileId = this.getAttribute('data-file-id');
@@ -594,7 +605,7 @@ function openFileActions(fileId) {
             }
         }, 0);
     }
-    
+
     modal.show();
 }
 
@@ -616,7 +627,7 @@ async function deleteFile(fileId, modal = null) {
         if (response.ok) {
             const result = await response.json();
             showToast(result.message || 'Файл успешно удален', 'success');
-            
+
             if (modal && typeof modal.hide === 'function') {
                 modal.hide();
             } else {
@@ -626,7 +637,7 @@ async function deleteFile(fileId, modal = null) {
                     if (bsModal) bsModal.hide();
                 }
             }
-            
+
             await loadFiles();
         } else if (response.status === 404) {
             showToast('Файл не найден', 'error');
@@ -653,7 +664,7 @@ function findFileById(fileId) {
     try {
         // Проверяем структуру данных
         let allFiles = [];
-        
+
         if (filesData.files) {
             // Современная структура: filesData.files.owned и filesData.files.shared
             if (filesData.files.owned || filesData.files.shared) {
@@ -661,12 +672,12 @@ function findFileById(fileId) {
                     ...(filesData.files.owned || []),
                     ...(filesData.files.shared || [])
                 ];
-            } 
+            }
             // Старая структура: filesData.files - это массив
             else if (Array.isArray(filesData.files)) {
                 allFiles = [...filesData.files];
             }
-        } 
+        }
         // Ещё более старая структура: filesData - это массив
         else if (Array.isArray(filesData)) {
             allFiles = [...filesData];
@@ -675,20 +686,20 @@ function findFileById(fileId) {
         // Ищем файл
         const foundFile = allFiles.find(file => {
             // Проверяем и числовой и строковый ID
-            return file.id === fileId || 
-                   file.id === parseInt(fileId) || 
-                   file.id == fileId; // Нестрогое сравнение
+            return file.id === fileId ||
+                file.id === parseInt(fileId) ||
+                file.id == fileId; // Нестрогое сравнение
         });
-        
+
         if (!foundFile) {
             console.warn(`Файл с ID ${fileId} не найден`);
             console.log('Доступные файлы:', allFiles);
         }
-        
+
         return foundFile || null;
-        
+
     } catch (error) {
-        console.error('Ошибка при поиске файла:', error);
+        console.error('Ошибкапри поиске файла:', error);
         console.log('Текущий filesData:', filesData);
         return null;
     }
@@ -724,7 +735,7 @@ function showToast(message, type = 'info') {
             <div class="toast-body">
                 ${message}
             </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" 
+            <button type="button" class="btn-close btn-close-white me-2 m-auto"
                     data-bs-dismiss="toast"></button>
         </div>
     `;

@@ -51,6 +51,9 @@ app.add_middleware(
         "http://localhost:8080",
         "http://localhost:8000",
         "http://frontend:80",
+        "https://cloud.stadolnik.site",  # Для моего сервера
+        "https://api.stadolnik.site",
+        "https://stadolnik.site",
     ],
     allow_credentials=True,
     allow_methods=["*"],
