@@ -72,7 +72,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /home/duck/Dev/Python/graduation
-            
             git pull origin main
             
             make build
