@@ -81,11 +81,15 @@ jobs:
           SSH_HOST: ssh.stadolnik.site
           SSH_USER: duck
         run: |
-          ssh -i ~/.ssh/id_rsa -o ProxyCommand="/usr/local/bin/cloudflared access ssh --hostname %h" $SSH_USER@$SSH_HOST << 'EOF'
-            cd /home/duck/Dev/Python/graduation
-            git pull origin main
-            make build
-            make up
-            make migrate
-            docker image prune -f
-          EOF
+            ssh -i ~/.ssh/id_rsa \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -o ProxyCommand="/usr/local/bin/cloudflared access ssh --hostname %h" \
+            $SSH_USER@$SSH_HOST << 'EOF'
+              cd /home/duck/Dev/Python/graduation
+              git pull origin main
+              make build
+              make up
+              make migrate
+              docker image prune -f
+            EOF
