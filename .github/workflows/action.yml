@@ -93,14 +93,10 @@ jobs:
             echo "Rebuilding containers..."
             make build
           
-            echo "Restarting services..."
-            make up
-          
-            echo "Waiting for DB to settle..."
             sleep 15
           
-            echo "Applying migrations..."
-            make migrate
+            echo "Restarting services..."
+            make up
           
             echo "Cleaning up old images..."
             docker image prune -f
