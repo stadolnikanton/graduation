@@ -55,3 +55,28 @@ jobs:
       - name: Cleanup
         if: always()
         run: make clean
+  deploy:
+    needs: tests
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Executing remote ssh commands using password
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ssh.stadolnik.site
+          username: duck
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/duck/Dev/Python/graduation
+            
+            git pull origin main
+            
+            make build
+            make up
+            make migrate
+            
+            docker image prune -f
