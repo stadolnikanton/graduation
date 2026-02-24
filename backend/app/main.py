@@ -23,13 +23,9 @@ async def lifespan(app: FastAPI):
             f"✅ MinIO bucket '{settings.MINIO_BUCKET_NAME}' initialized successfully"
         )
     else:
-        print(
-            f"❌ Failed to initialize MinIO bucket '{settings.MINIO_BUCKET_NAME}'"
-        )
+        print(f"❌ Failed to initialize MinIO bucket '{settings.MINIO_BUCKET_NAME}'")
 
-    print(
-        f"📊 Database: {settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
-    )
+    print(f"📊 Database: {settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}")
     print(f"📁 File storage: MinIO at {settings.MINIO_ENDPOINT}:9000")
     print("✅ Application startup complete")
 
