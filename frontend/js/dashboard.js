@@ -35,9 +35,6 @@ async function loadUserProfile() {
 
         if (response.ok) {
             currentUser = await response.json();
-            console.log("Данные профиля получены:", currentUser);
-
-            // Обновляем основные поля
             if (currentUser.name) {
                 document.getElementById('user-name').textContent = currentUser.name;
                 document.getElementById('user-initials').textContent = currentUser.name.charAt(0).toUpperCase();
@@ -45,7 +42,6 @@ async function loadUserProfile() {
 
             document.getElementById('user-email').textContent = currentUser.email;
 
-            // Обновляем ID (с приведением к строке)
             const idElement = document.getElementById('user-id');
             if (idElement) {
                 idElement.textContent = String(currentUser.id);

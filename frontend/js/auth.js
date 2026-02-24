@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8000";
+const API_BASE = "";
 
 function showRegisterForm() {
   document.getElementById("login-form").classList.add("d-none");
@@ -22,6 +22,7 @@ function showAlert(message, type = "danger") {
 function hideAlert() {
   document.getElementById("auth-alert").classList.add("d-none");
 }
+
 
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();

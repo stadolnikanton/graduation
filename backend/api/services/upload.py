@@ -384,7 +384,10 @@ class Upload:
 
                 await file.seek(0)
                 success = await anyio.to_thread.run_sync(
-                    upload_file, file, unique_filename, settings.MINIO_BUCKET_NAME
+                    upload_file,
+                    file,
+                    unique_filename,
+                    settings.MINIO_BUCKET_NAME,
                 )
 
                 if not success:
@@ -423,7 +426,11 @@ class Upload:
             except Exception as e:
                 await self.session.rollback()
                 results.append(
-                    {"status": "error", "filename": file.filename, "error": str(e)}
+                    {
+                        "status": "error",
+                        "filename": file.filename,
+                        "error": str(e),
+                    }
                 )
 
         return {

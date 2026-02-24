@@ -1,11 +1,6 @@
 import hashlib
 from datetime import datetime
 
-from fastapi import Depends, HTTPException
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-
 from core.auth_cookies import delete_auth_cookies, set_auth_cookies
 from core.secure import (
     create_access_token,
@@ -14,9 +9,10 @@ from core.secure import (
     verify_password,
     verify_token,
 )
-from core.deps import get_db
+from fastapi import HTTPException
 from models.token import BlacklistedToken
 from models.user import User
+from sqlalchemy import select
 
 
 class Authentication:
