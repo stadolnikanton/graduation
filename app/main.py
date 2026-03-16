@@ -68,25 +68,5 @@ app.add_middleware(
 app.include_router(router)
 
 
-@app.get("/")
-async def root():
-    return {
-        "message": "FileCloud API",
-        "version": "1.0.0",
-        "status": "running",
-        "docs": "/docs",
-        "redoc": "/redoc",
-    }
-
-
-@app.get("/health")
-async def health_check():
-    return {
-        "status": "healthy",
-        "service": "filecloud-backend",
-        "timestamp": "current_time",
-    }
-
-
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

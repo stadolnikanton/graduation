@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     MINIO_ROOT_PASSWORD: SecretStr = Field(default="minioadmin")
     MINIO_BUCKET_NAME: str = Field(default="uploads")
 
+    # Redis
+    REDIS_HOST: str = Field(default="localhost")
+    REDIS_PORT: int = Field(default=6379)
+    REDIS_DB: int = Field(default=0)
+
     model_config = SettingsConfigDict(
         env_file=Path(__file__).parent.parent / ".env",
         env_file_encoding="utf-8",
