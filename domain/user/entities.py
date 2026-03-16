@@ -2,11 +2,12 @@ from dataclasses import dataclass
 from datetime import datetime
 
 
-class User(dataclass):
+@dataclass
+class User:
     id: int | None = None
-    firstname: str = ""
-    lastname: str = ""
+    first_name: str = ""
+    last_name: str = ""
     username: str = ""
     email: str = ""
-    password: str = ""
+    password_hash: str = ""
     created_at: datetime | None = None
