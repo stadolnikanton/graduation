@@ -1,11 +1,10 @@
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from schemas.file import AccessLevel
 from sqlalchemy import BigInteger, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db import Base
+from app.database import Base
 
 if TYPE_CHECKING:
     from .link import ShareLink
@@ -56,10 +55,6 @@ class FileShares(Base):
 
     shared_at: Mapped[datetime] = mapped_column(
         default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
-    )
-
-    access_level: Mapped[AccessLevel] = mapped_column(
-        Enum(AccessLevel), default=AccessLevel.READ, nullable=False
     )
 
     file: Mapped["File"] = relationship("File", back_populates="shares")

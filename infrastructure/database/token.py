@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db import Base
+from app.database import Base
 
 if TYPE_CHECKING:
-    from .user import User
+    from .user import UserDB
 
 
 class BlacklistedToken(Base):
@@ -20,9 +20,7 @@ class BlacklistedToken(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
     token_type: Mapped[str] = mapped_column(String(20))
     expires_at: Mapped[datetime] = mapped_column()
-    revoked_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
-    )
+    revoked_at: Mapped[datetime] = mapped_column(default=datetime.now(timezone.utc))
     reason: Mapped[str] = mapped_column(Text, nullable=True)
     owner_jwt: Mapped["User"] = relationship(
         "User", back_populates="blacklisted_tokens", overlaps="blacklisted_tokens"

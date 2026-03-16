@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db import Base
+from app.database import Base
 
 if TYPE_CHECKING:
     from .file import File
