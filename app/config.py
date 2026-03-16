@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -21,12 +22,9 @@ class Settings(BaseSettings):
 
     # MinIO
     MINIO_ENDPOINT: str = Field(default="minio")
-    MINIO_ACCESS_KEY: str = Field(default="minioadmin")
-    MINIO_SECRET_KEY: SecretStr = Field(default="minioadmin")
+    MINIO_ROOT_USER: str = Field(default="minioadmin")
+    MINIO_ROOT_PASSWORD: SecretStr = Field(default="minioadmin")
     MINIO_BUCKET_NAME: str = Field(default="uploads")
-
-    # File storage
-    UPLOAD_DIR: str = Field(default="static")
 
     model_config = SettingsConfigDict(
         env_file=Path(__file__).parent.parent / ".env",
