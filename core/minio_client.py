@@ -2,17 +2,18 @@ import io
 from urllib.parse import quote
 
 import boto3
-from app.config import settings
 from botocore.exceptions import ClientError
 from fastapi.responses import StreamingResponse
+
+from app.config import settings
 
 
 def get_s3_client():
     return boto3.client(
         "s3",
         endpoint_url=f"http://{settings.MINIO_ENDPOINT}:9000",
-        aws_access_key_id=settings.MINIO_ACCESS_KEY,
-        aws_secret_access_key=settings.MINIO_SECRET_KEY.get_secret_value(),
+        aws_access_key_id=settings.MINIO_ROOT_USER,
+        aws_secret_access_key=settings.MINIO_ROOT_PASSWORD.get_secret_value(),
         region_name="us-east-1",
         config=boto3.session.Config(signature_version="s3v4"),
     )

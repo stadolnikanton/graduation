@@ -1,11 +1,12 @@
+from contextlib import asynccontextmanager
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 
+from api.routes import auth, share, upload
 from app.config import settings
 from core.minio_init import init_minio
-from api.routes import auth, upload, share
 
 
 @asynccontextmanager
