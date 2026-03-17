@@ -1,7 +1,3 @@
-# TODO(REFACTOR-SECURITY): SECURE изменить на True для продакшена
-# TODO(REFACTOR-SECURITY): Добавить настройку через settings
-# TODO(REFACTOR-LOGGING): Заменить logger.debug на logger.info
-
 import logging
 from typing import Any, Dict, Optional
 
@@ -10,7 +6,7 @@ from fastapi import Response
 ACCESS_TOKEN_MAX_AGE: int = 30 * 60
 REFRESH_TOKEN_MAX_AGE: int = 7 * 24 * 60 * 60
 HTTPONLY: bool = True
-SECURE: bool = False  # В продакшене изменить на True, False только для локальной
+SECURE: bool = False
 SAME_SITE: str = "lax"
 COOKIE_PATH: str = "/"
 

@@ -1,5 +1,3 @@
-# TODO(REFACTOR-LOGGING): Настроить logging вместо print()
-
 from contextlib import asynccontextmanager
 
 import uvicorn

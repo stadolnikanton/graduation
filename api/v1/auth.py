@@ -1,10 +1,5 @@
-# TODO(REFACTOR-AUTH): Добавить response_model
-# TODO(REFACTOR-AUTH): Обработать ошибки (HTTPException)
-# TODO(REFACTOR-AUTH): Вернуть полноценный ответ (user + tokens)
-# TODO(REFACTOR-LOGGING): Добавить логирование запросов
 from fastapi import APIRouter, Request, Response
 from fastapi.params import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.deps import delete_auth_cookies, get_auth_service, get_current_user
 from domain.user.services import AuthenticationService

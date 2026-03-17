@@ -1,6 +1,3 @@
-# TODO(REFACTOR-AUTH): Реализовать refresh() — обновление токенов
-# TODO(REFACTOR-LOGGING): Добавить логирование
-
 import time
 
 from fastapi import Request

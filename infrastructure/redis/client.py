@@ -1,9 +1,3 @@
-# TODO(REFACTOR-REDIS): Реализовать save_refresh_token()
-# TODO(REFACTOR-REDIS): Реализовать delete_refresh_tokens()
-# TODO(REFACTOR-REDIS): Добавить type hints
-# TODO(REFACTOR-REDIS): Обработать ошибки подключения
-# TODO(REFACTOR-REDIS): Добавить логирование
-
 import redis.asyncio as aioredis
 
 

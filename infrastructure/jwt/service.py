@@ -1,9 +1,3 @@
-# TODO(REFACTOR-JWT): Добавить async в методы (если нужен Redis)
-# TODO(REFACTOR-JWT): Интегрировать Redis в verify_token() — проверка blacklist
-# TODO(REFACTOR-JWT): Добавить методы для refresh токена (сохранение в Redis)
-# TODO(REFACTOR-JWT): Добавить логирование
-# TODO(REFACTOR-JWT): Обработать JWT ошибки (ExpiredSignatureError и т.д.)
-
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
