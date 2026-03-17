@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, Enum, ForeignKey, Integer, String
+from sqlalchemy import BigInteger, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+from .user import UserDB
 
 if TYPE_CHECKING:
     from .link import ShareLink
@@ -23,11 +25,9 @@ class File(Base):
     owner: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
     path: Mapped[str] = mapped_column(String(), nullable=False)
     size: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
-    created_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
-    )
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
-    owner_user: Mapped["User"] = relationship("User", back_populates="files")
+    owner_user: Mapped["UserDB"] = relationship("UserDB", back_populates="files")
 
     share_links: Mapped[list["ShareLink"]] = relationship(
         "ShareLink",
@@ -58,5 +58,5 @@ class FileShares(Base):
     )
 
     file: Mapped["File"] = relationship("File", back_populates="shares")
-    owner_user: Mapped["User"] = relationship("User", foreign_keys=[owner_id])
-    shared_user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+    owner_user: Mapped["UserDB"] = relationship("UserDB", foreign_keys=[owner_id])
+    shared_user: Mapped["UserDB"] = relationship("UserDB", foreign_keys=[user_id])

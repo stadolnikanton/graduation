@@ -22,6 +22,7 @@ class Settings(BaseSettings):
 
     # MinIO
     MINIO_ENDPOINT: str = Field(default="minio")
+    MINIO_PORT_API: str = Field(default="9000")
     MINIO_ROOT_USER: str = Field(default="minioadmin")
     MINIO_ROOT_PASSWORD: SecretStr = Field(default="minioadmin")
     MINIO_BUCKET_NAME: str = Field(default="uploads")

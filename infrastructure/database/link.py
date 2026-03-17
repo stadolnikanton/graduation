@@ -19,9 +19,7 @@ class ShareLink(Base):
     expires_at: Mapped[datetime]
     max_downloads: Mapped[int] = mapped_column(default=1)
     download_count: Mapped[int] = mapped_column(default=0)
-    created_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
-    )
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
     file: Mapped["File"] = relationship(
         "File", back_populates="share_links", overlaps="share_links"

@@ -20,7 +20,9 @@ class JWTService:
         self.algorithm: str = algorithm
         self.redis = redis_client
 
-    def create_access_token(self, data: dict, expires_delta) -> str:
+    def create_access_token(
+        self, data: dict, expires_delta: Optional[timedelta] = None
+    ) -> str:
         to_encode = data.copy()
 
         if expires_delta:

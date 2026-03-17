@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import async_session_maker
+from domain.user.services import AuthenticationService
 from infrastructure.jwt.service import JWTService
 from infrastructure.minio.client import MinioClient
 from infrastructure.redis.client import RedisClient
@@ -46,6 +47,13 @@ async def get_user_repo(
     session: AsyncSession = Depends(get_database),
 ) -> UserRepository:
     return UserRepository(session)
+
+
+async def get_auth_service(
+    user_repo: UserRepository = Depends(get_user_repo),
+    jwt_service: JWTService = Depends(get_jwt_service),
+) -> AuthenticationService:
+    return AuthenticationService(user_repo, jwt_service)
 
 
 class AuthCookies:

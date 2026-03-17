@@ -1,4 +1,6 @@
-from sqlalchemy import select
+from datetime import datetime
+
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.user.entities import User
@@ -22,6 +24,18 @@ class UserRepository:
         await self.session.refresh(new_user)
 
         return self.__convert_to_entity(new_user)
+
+    async def username_or_email(self, value: str) -> User | None:
+
+        stmt = select(UserDB).where(
+            or_(UserDB.email == value, UserDB.username == value)
+        )
+        result = await self.session.execute(stmt)
+        db_user = result.scalar_one_or_none()
+
+        if db_user:
+            return self.__convert_to_entity(db_user)
+        return None
 
     async def get_by_email(self, email: str) -> User | None:
         stmt = select(UserDB).where(UserDB.email == email)
@@ -60,4 +74,6 @@ class UserRepository:
             first_name=user.first_name,
             last_name=user.last_name,
             email=user.email,
+            password_hash=user.password_hash,
+            created_at=user.created_at,
         )

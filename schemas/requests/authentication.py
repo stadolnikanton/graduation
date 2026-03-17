@@ -7,8 +7,8 @@ class LoginRequest(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    firstname: str
-    lastname: str
+    first_name: str
+    last_name: str
     username: str
     email: EmailStr
     password: str

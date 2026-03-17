@@ -20,10 +20,10 @@ class BlacklistedToken(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
     token_type: Mapped[str] = mapped_column(String(20))
     expires_at: Mapped[datetime] = mapped_column()
-    revoked_at: Mapped[datetime] = mapped_column(default=datetime.now(timezone.utc))
+    revoked_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     reason: Mapped[str] = mapped_column(Text, nullable=True)
-    owner_jwt: Mapped["User"] = relationship(
-        "User", back_populates="blacklisted_tokens", overlaps="blacklisted_tokens"
+    owner_jwt: Mapped["UserDB"] = relationship(
+        "UserDB", back_populates="blacklisted_tokens", overlaps="blacklisted_tokens"
     )
 
     def __repr__(self) -> str:

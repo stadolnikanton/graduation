@@ -2,13 +2,8 @@ import hashlib
 from datetime import datetime
 
 from core.auth_cookies import delete_auth_cookies, set_auth_cookies
-from core.secure import (
-    create_access_token,
-    create_refresh_token,
-    get_password_hash,
-    verify_password,
-    verify_token,
-)
+from core.secure import (create_access_token, create_refresh_token,
+                         get_password_hash, verify_password, verify_token)
 from fastapi import HTTPException
 from models.token import BlacklistedToken
 from models.user import User

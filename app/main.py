@@ -1,12 +1,15 @@
+# TODO(REFACTOR-CORE): Перенести minio_init в infrastructure/minio/init.py
+# TODO(REFACTOR-LOGGING): Настроить logging вместо print()
+
 from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from api.deps import MinioClient, get_minio_client
 from api.v1 import router
 from app.config import settings
-from core.minio_init import init_minio
 
 
 @asynccontextmanager
@@ -18,7 +21,7 @@ async def lifespan(app: FastAPI):
 
     print("🚀 Starting FileCloud application...")
 
-    minio_success = init_minio()
+    minio_success = get_minio_client().init_minio(settings.MINIO_BUCKET_NAME)
     if minio_success:
         print(
             f"✅ MinIO bucket '{settings.MINIO_BUCKET_NAME}' initialized successfully"
