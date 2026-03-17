@@ -1,26 +1,51 @@
-from fastapi import HTTPException, status, Request, Response
-from typing import Optional, Dict, Any
+# TODO(REFACTOR-AUTH): Проверка blacklist токенов через Redis
 
+from typing import Any, Dict, Optional
+
+from fastapi import HTTPException, Request, Response, status
 from fastapi.params import Depends
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import async_session_maker
+from app.config import settings
+from app.database import async_session_maker
+from infrastructure.jwt.service import JWTService
+from infrastructure.minio.client import MinioClient
+from infrastructure.redis.client import RedisClient
+from infrastructure.repositories.user import UserRepository
+from infrastructure.security.cookies import (delete_auth_cookies,
+                                             set_auth_cookies,
+                                             set_auth_cookies_with_user_data)
 
 
-from models.user import User
-
-from core.secure import verify_token
-from core.auth_cookies import (
-    set_auth_cookies,
-    delete_auth_cookies,
-    set_auth_cookies_with_user_data,
-)
-
-
-async def get_db():
+# Возвращает сессию базы данных
+async def get_database():
     async with async_session_maker() as session:
         yield session
+
+
+# Возвращает клиент minio
+def get_minio_client():
+    return MinioClient(
+        settings.MINIO_ENDPOINT,
+        settings.MINIO_PORT_API,
+        settings.MINIO_ROOT_USER,
+        settings.MINIO_ROOT_PASSWORD.get_secret_value(),
+    )
+
+
+# Возвращает клиент redis
+def get_redis_client():
+    return RedisClient(settings.REDIS_HOST, settings.REDIS_PORT, settings.REDIS_DB)
+
+
+async def get_jwt_service():
+    return JWTService(settings.SECRET_KEY.get_secret_value(), settings.ALGORITHM)
+
+
+async def get_user_repo(
+    session: AsyncSession = Depends(get_database),
+) -> UserRepository:
+    return UserRepository(session)
 
 
 class AuthCookies:
@@ -82,7 +107,9 @@ def get_auth_cookies(response: Response) -> AuthCookies:
 
 
 async def get_current_user(
-    request: Request, session: AsyncSession = Depends(get_db)
+    request: Request,
+    jwt_service: JWTService = Depends(get_jwt_service),
+    user_repo: UserRepository = Depends(get_user_repo),
 ) -> Dict:
     access_token = request.cookies.get("access_token")
 
@@ -92,7 +119,7 @@ async def get_current_user(
             detail="Access token not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    payload = verify_token(access_token)
+    payload = jwt_service.verify_token(access_token)
 
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -105,9 +132,7 @@ async def get_current_user(
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
 
-    stmt = select(User).where(User.id == int(user_id))
-    result = await session.execute(stmt)
-    user = result.scalar_one_or_none()
+    user = await user_repo.get_by_id(user_id)
 
     if not user:
         raise HTTPException(
