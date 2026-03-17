@@ -26,3 +26,7 @@ class InvalidCredentialError(DomainError):
 
 class TokenBlacklistedError(DomainError):
     pass
+
+
+class InvalidTokenError(DomainError):
+    pass

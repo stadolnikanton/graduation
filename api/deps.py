@@ -1,5 +1,3 @@
-# TODO(REFACTOR-AUTH): Проверка blacklist токенов через Redis
-
 from typing import Any, Dict, Optional
 
 from fastapi import HTTPException, Request, Response, status
@@ -8,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import async_session_maker
+from domain.errors import (InvalidTokenError, TokenBlacklistedError,
+                           UserNotFoundError)
 from domain.user.services import AuthenticationService
 from infrastructure.jwt.service import JWTService
 from infrastructure.minio.client import MinioClient
@@ -52,8 +52,9 @@ async def get_user_repo(
 async def get_auth_service(
     user_repo: UserRepository = Depends(get_user_repo),
     jwt_service: JWTService = Depends(get_jwt_service),
+    redis_client: RedisClient = Depends(get_redis_client),
 ) -> AuthenticationService:
-    return AuthenticationService(user_repo, jwt_service)
+    return AuthenticationService(user_repo, jwt_service, redis_client)
 
 
 class AuthCookies:
@@ -118,6 +119,7 @@ async def get_current_user(
     request: Request,
     jwt_service: JWTService = Depends(get_jwt_service),
     user_repo: UserRepository = Depends(get_user_repo),
+    redis_client: RedisClient = Depends(get_redis_client),
 ) -> Dict:
     access_token = request.cookies.get("access_token")
 
@@ -127,24 +129,33 @@ async def get_current_user(
             detail="Access token not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    is_blacklist = await redis_client.is_blacklisted(access_token)
+
+    if is_blacklist:
+        raise TokenBlacklistedError()
+
     payload = jwt_service.verify_token(access_token)
 
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise InvalidTokenError()
+    # HTTPException(status_code=401, detail="Invalid token")
 
     token_type = payload.get("type")
     if token_type and token_type != "access":
-        raise HTTPException(status_code=422, detail="Not an access token")
+        raise InvalidTokenError()
+    # HTTPException(status_code=422, detail="Not an access token")
 
     user_id = payload.get("sub")
     if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid token payload")
+        raise InvalidTokenError()
+    # HTTPException(status_code=401, detail="Invalid token payload")
 
-    user = await user_repo.get_by_id(user_id)
+    user = await user_repo.get_by_id(int(user_id))
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
+        raise UserNotFoundError()
+    # HTTPException(
+    #        status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+    #    )
 
     return user

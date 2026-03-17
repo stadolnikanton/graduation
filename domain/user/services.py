@@ -1,18 +1,28 @@
-# TODO(REFACTOR-AUTH): Реализовать logout() — blacklist токенов через Redis
 # TODO(REFACTOR-AUTH): Реализовать refresh() — обновление токенов
 # TODO(REFACTOR-LOGGING): Добавить логирование
 
+import time
+
+from fastapi import Request
+
 from domain.errors import (EmailAlreadyExistsError, InvalidCredentialError,
-                           UsernameAlreadyExistError)
+                           TokenBlacklistedError, UsernameAlreadyExistError)
 from domain.user.entities import User
 from infrastructure.jwt.service import JWTService
+from infrastructure.redis.client import RedisClient
 from infrastructure.repositories.user import UserRepository
 from infrastructure.security.password import hash_password, verify_password
 from schemas.requests.authentication import LoginRequest, RegisterRequest
 
 
 class AuthenticationService:
-    def __init__(self, user_repo: UserRepository, jwt_service: JWTService) -> None:
+    def __init__(
+        self,
+        user_repo: UserRepository,
+        jwt_service: JWTService,
+        redis_client: RedisClient,
+    ) -> None:
+        self.redis_client = redis_client
         self.user_repo = user_repo
         self.jwt_service = jwt_service
 
@@ -69,8 +79,49 @@ class AuthenticationService:
             "refresh_token": refresh_token,
         }
 
-    def logout(self):
-        pass
+    async def logout(
+        self,
+        request: Request,
+    ):
+        access_token = request.cookies.get("access_token")
+        refresh_token = request.cookies.get("refresh_token")
+        if access_token:
+            await self.__block_token(access_token)
+        if refresh_token:
+            await self.__block_token(refresh_token)
 
-    def refresh(self):
-        pass
+    async def refresh(self, request: Request):
+        refresh_token = request.cookies.get("refresh_token")
+        if refresh_token:
+            is_blocked_token = await self.redis_client.is_blacklisted(refresh_token)
+            if is_blocked_token:
+                raise TokenBlacklistedError()
+
+            payload = self.jwt_service.verify_token(refresh_token)
+
+            if payload.get("type") != "refresh":
+                raise TokenBlacklistedError()
+            user_id = int(payload.get("sub"))
+            result = await self.user_repo.get_by_id(user_id)
+
+            if result:
+                await self.__block_token(refresh_token)
+                data = {"sub": str(result.id)}
+                access_token = self.jwt_service.create_access_token(data)
+                refresh_token = self.jwt_service.create_refresh_token(data)
+
+            return {
+                "user": result,
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+            }
+
+    async def me(self, user):
+        return await self.user_repo.get_by_id(user)
+
+    async def __block_token(self, token):
+        payload = self.jwt_service.verify_token(token)
+        if payload:
+            ttl = payload.get("exp") - int(time.time())
+            if ttl > 0:
+                await self.redis_client.blacklist_token(token, ttl)

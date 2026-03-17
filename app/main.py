@@ -1,4 +1,3 @@
-# TODO(REFACTOR-CORE): Перенести minio_init в infrastructure/minio/init.py
 # TODO(REFACTOR-LOGGING): Настроить logging вместо print()
 
 from contextlib import asynccontextmanager
@@ -7,7 +6,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.deps import MinioClient, get_minio_client
+from api.deps import get_minio_client
 from api.v1 import router
 from app.config import settings
 
