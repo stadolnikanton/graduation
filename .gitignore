@@ -9,3 +9,5 @@ static/
 .idea/
 init-db.sql/
 .env
+*.log
+*.txt

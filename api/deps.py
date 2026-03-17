@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 
-from fastapi import HTTPException, Request, Response, status
+from fastapi import HTTPException, Request, Response
 from fastapi.params import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -138,24 +138,18 @@ async def get_current_user(
 
     if not payload:
         raise InvalidTokenError()
-    # HTTPException(status_code=401, detail="Invalid token")
 
     token_type = payload.get("type")
     if token_type and token_type != "access":
         raise InvalidTokenError()
-    # HTTPException(status_code=422, detail="Not an access token")
 
     user_id = payload.get("sub")
     if not user_id:
         raise InvalidTokenError()
-    # HTTPException(status_code=401, detail="Invalid token payload")
 
     user = await user_repo.get_by_id(int(user_id))
 
     if not user:
         raise UserNotFoundError()
-    # HTTPException(
-    #        status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-    #    )
 
     return user

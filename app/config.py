@@ -1,5 +1,7 @@
+import logging
 from pathlib import Path
 
+import colorlog
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -32,6 +34,8 @@ class Settings(BaseSettings):
     REDIS_PORT: int = Field(default=6379)
     REDIS_DB: int = Field(default=0)
 
+    # Logging
+
     model_config = SettingsConfigDict(
         env_file=Path(__file__).parent.parent / ".env",
         env_file_encoding="utf-8",
@@ -41,6 +45,12 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+logging_config: dict = {
+    "level": logging.INFO,
+    "format": "%(log_color)s%(asctime)s - %(name)s - %(levelname)s - %(message)s%(reset)s",
+    "handlers": [colorlog.StreamHandler(), logging.FileHandler("app.log")],
+}
 
 
 def get_db_url() -> str:
