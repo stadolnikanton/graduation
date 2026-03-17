@@ -22,6 +22,7 @@ async def login(
     result = await auth_service.login(data)
     set_auth_cookies(response, result["access_token"], result["refresh_token"])
     logger.info(f"POST /api/v1/auth/login 200")
+    return result
 
 
 @router.post("/register")
@@ -33,6 +34,7 @@ async def register(
     result = await auth_service.register(data)
     set_auth_cookies(response, result["access_token"], result["refresh_token"])
     logger.info(f"POST /api/v1/auth/register 200")
+    return result
 
 
 @router.post("/logout")
@@ -56,6 +58,7 @@ async def refresh(
     result = await auth_service.refresh(request)
     set_auth_cookies(response, result["access_token"], result["refresh_token"])
     logger.info(f"POST /api/v1/auth/refresh 200")
+    return result
 
 
 @router.get("/me", response_model=UserResponse)

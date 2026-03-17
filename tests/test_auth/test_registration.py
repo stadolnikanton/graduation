@@ -1,72 +1,97 @@
+"""Тесты для регистрации пользователей."""
+
 import pytest
 
 
 @pytest.mark.anyio
-async def test_register(db_connect):
-    """Тест успешной регистрации пользователя"""
+async def test_register_success(db_connect):
+    """Тест успешной регистрации пользователя."""
     response = await db_connect.post(
-        "/auth/register",
+        "/v1/auth/register",
         json={
-            "name": "test_user_reg",
-            "email": "test_reg@mail.com",
-            "password": "Vfhnf12999",
-            "password_confirm": "Vfhnf12999",
+            "username": "test_user",
+            "first_name": "Test",
+            "last_name": "User",
+            "email": "test@example.com",
+            "password": "TestPassword123",
+            "password_confirm": "TestPassword123",
         },
     )
 
     assert response.status_code == 200
-    assert response.json() == {"status": 200}
+    data = response.json()
+    assert "access_token" in data
+    assert "refresh_token" in data
+    assert "user" in data
+    assert data["user"]["username"] == "test_user"
+    assert data["user"]["email"] == "test@example.com"
 
 
 @pytest.mark.anyio
-async def test_register_same_email(db_connect):
-    """Тест регистрации с существующим email"""
-    # Первый запрос
+async def test_register_email_exists(db_connect):
+    """Тест регистрации с существующим email."""
+    # Первая регистрация
     await db_connect.post(
-        "/auth/register",
+        "/v1/auth/register",
         json={
-            "name": "user1",
-            "email": "duplicate@mail.com",
-            "password": "Vfhnf12999",
-            "password_confirm": "Vfhnf12999",
+            "username": "user1",
+            "first_name": "User",
+            "last_name": "One",
+            "email": "duplicate@example.com",
+            "password": "TestPassword123",
+            "password_confirm": "TestPassword123",
         },
     )
-    # Второй запрос с тем же email
+
+    # Вторая регистрация с тем же email
     response = await db_connect.post(
-        "/auth/register",
+        "/v1/auth/register",
         json={
-            "name": "user2",
-            "email": "duplicate@mail.com",
-            "password": "Vfhnf12999",
-            "password_confirm": "Vfhnf12999",
+            "username": "user2",
+            "first_name": "User",
+            "last_name": "Two",
+            "email": "duplicate@example.com",
+            "password": "TestPassword123",
+            "password_confirm": "TestPassword123",
         },
     )
 
     assert response.status_code == 400
-    assert response.json() == {"detail": "Email already registered"}
+    data = response.json()
+    assert data["status"] == 400
+    assert data["error"] == "Email already registered"
 
 
 @pytest.mark.anyio
-async def test_register_same_name(db_connect):
-    """Тест регистрации с существующим именем пользователя"""
+async def test_register_username_exists(db_connect):
+    """Тест регистрации с существующим username."""
+    # Первая регистрация
     await db_connect.post(
-        "/auth/register",
+        "/v1/auth/register",
         json={
-            "name": "unique_name",
-            "email": "email1@mail.com",
-            "password": "Vfhnf12999",
-            "password_confirm": "Vfhnf12999",
+            "username": "unique_user",
+            "first_name": "User",
+            "last_name": "One",
+            "email": "user1@example.com",
+            "password": "TestPassword123",
+            "password_confirm": "TestPassword123",
         },
     )
+
+    # Вторая регистрация с тем же username
     response = await db_connect.post(
-        "/auth/register",
+        "/v1/auth/register",
         json={
-            "name": "unique_name",
-            "email": "email2@mail.com",
-            "password": "Vfhnf12999",
-            "password_confirm": "Vfhnf12999",
+            "username": "unique_user",
+            "first_name": "User",
+            "last_name": "Two",
+            "email": "user2@example.com",
+            "password": "TestPassword123",
+            "password_confirm": "TestPassword123",
         },
     )
 
     assert response.status_code == 400
-    assert response.json() == {"detail": "Username already taken"}
+    data = response.json()
+    assert data["status"] == 400
+    assert data["error"] == "Username already registered"
