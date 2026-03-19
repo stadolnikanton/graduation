@@ -21,19 +21,11 @@ async def test_refresh_success(auth_client):
     response = await auth_client.post("/v1/auth/refresh")
 
     assert response.status_code == 200
-    data = response.json()
-    assert "access_token" in data
-    assert "refresh_token" in data
+    assert old_access != auth_client.cookies.get("access_token")
+    assert old_refresh != auth_client.cookies.get("refresh_token")
 
-    # Проверяем что токены в ответе новые
-    new_access = data["access_token"]
-    new_refresh = data["refresh_token"]
-    
-    # Access token должен быть новым (refresh token тоже)
-    assert new_access != old_access, "Access token должен измениться после refresh"
-    assert new_refresh != old_refresh, "Refresh token должен измениться после refresh (ротация)"
-    
-    # Проверяем что cookies обновились
+
+# Проверяем что cookies обновились
     assert auth_client.cookies.get("access_token") is not None
     assert auth_client.cookies.get("refresh_token") is not None
 

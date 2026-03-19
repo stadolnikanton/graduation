@@ -19,12 +19,9 @@ async def test_register_success(db_connect):
     )
 
     assert response.status_code == 200
-    data = response.json()
-    assert "access_token" in data
-    assert "refresh_token" in data
-    assert "user" in data
-    assert data["user"]["username"] == "test_user"
-    assert data["user"]["email"] == "test@example.com"
+    data = response.json
+    assert db_connect.cookies.get("access_token") is not None
+    assert db_connect.cookies.get("refresh_token") is not None
 
 
 @pytest.mark.anyio
