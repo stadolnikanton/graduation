@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 if TYPE_CHECKING:
-    from .file import File
+    from .file import FileDB
     from .token import BlacklistedToken
 
 
@@ -22,8 +22,8 @@ class UserDB(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
-    files: Mapped[list["File"]] = relationship(
-        "File",
+    files: Mapped[list["FileDB"]] = relationship(
+        "FileDB",
         back_populates="owner_user",
         lazy="select",
         cascade="all, delete-orphan",
@@ -38,8 +38,8 @@ class UserDB(Base):
     )
 
     shared_files_access = relationship(
-        "FileShares",
-        foreign_keys="[FileShares.user_id]",
+        "FileSharesDB",
+        foreign_keys="[FileSharesDB.user_id]",
         viewonly=True,
     )
 

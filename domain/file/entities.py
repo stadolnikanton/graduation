@@ -5,7 +5,7 @@ from datetime import datetime
 @dataclass
 class File:
     id: int | None = None
-    name: str = ""
+    hash_name: str = ""
     original_filename: str = ""
     type: str = ""
     owner: int | None = None

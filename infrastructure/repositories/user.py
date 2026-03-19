@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -67,7 +65,8 @@ class UserRepository:
 
         return None
 
-    def __convert_to_entity(self, user) -> User:
+    @staticmethod
+    def __convert_to_entity(user) -> User:
         return User(
             id=user.id,
             username=user.username,

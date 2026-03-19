@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, String
@@ -7,10 +7,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 if TYPE_CHECKING:
-    from .file import File
+    from .file import FileDB
 
 
-class ShareLink(Base):
+class ShareLinkDB(Base):
     __tablename__ = "share_links"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -21,6 +21,6 @@ class ShareLink(Base):
     download_count: Mapped[int] = mapped_column(default=0)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
-    file: Mapped["File"] = relationship(
-        "File", back_populates="share_links", overlaps="share_links"
+    file: Mapped["FileDB"] = relationship(
+        "FileDB", back_populates="share_links", overlaps="share_links"
     )

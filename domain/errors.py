@@ -34,3 +34,20 @@ class TokenBlacklistedError(DomainError):
 class InvalidTokenError(DomainError):
     status_code = 401
     default_message = "Invalid token"
+
+
+class FileSizeExceededError(DomainError):
+    status_code = 413
+    default_message = "File size exceeds maximum allowed"
+
+class FileAlreadyExistsError(DomainError):
+    status_code = 409
+    default_message = ""
+    def __init__(self, filename: str):
+        self.filename = filename
+        super().__init__(f"File with name '{self.filename}' already exists")
+
+
+class FileUploadError(DomainError):
+    status_code = 500
+    default_message = "Failed to upload file to storage"

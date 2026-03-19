@@ -8,6 +8,7 @@ from app.config import settings
 from app.database import async_session_maker
 from domain.errors import (InvalidTokenError, TokenBlacklistedError,
                            UserNotFoundError)
+from domain.file.services import FileUploadService
 from domain.user.services import AuthenticationService
 from infrastructure.jwt.service import JWTService
 from infrastructure.minio.client import MinioClient
@@ -16,6 +17,8 @@ from infrastructure.repositories.user import UserRepository
 from infrastructure.security.cookies import (delete_auth_cookies,
                                              set_auth_cookies,
                                              set_auth_cookies_with_user_data)
+
+from infrastructure.repositories.file import FileRepository
 
 
 # Возвращает сессию базы данных
@@ -55,6 +58,17 @@ async def get_auth_service(
     redis_client: RedisClient = Depends(get_redis_client),
 ) -> AuthenticationService:
     return AuthenticationService(user_repo, jwt_service, redis_client)
+
+
+async def get_file_repo(session: AsyncSession = Depends(get_database)) -> FileRepository:
+    return FileRepository(session)
+
+
+async def get_file_service(
+        minio_client: MinioClient = Depends(get_minio_client),
+        file_repo: FileRepository = Depends(get_file_repo),
+) -> FileUploadService:
+    return FileUploadService(minio_client, file_repo)
 
 
 class AuthCookies:

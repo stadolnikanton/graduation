@@ -43,27 +43,27 @@ async def lifespan(app: FastAPI):
     Контекстный менеджер для управления жизненным циклом приложения.
     Выполняется при старте и завершении работы приложения.
     """
-    logger.info("🚀 Starting FileCloud application...")
+    logger.info("Starting FileCloud application...")
 
     minio_success = get_minio_client().init_minio(settings.MINIO_BUCKET_NAME)
     if minio_success:
         logger.info(
-            f"✅ MinIO bucket '{settings.MINIO_BUCKET_NAME}' initialized successfully"
+            f"MinIO bucket '{settings.MINIO_BUCKET_NAME}' initialized successfully"
         )
     else:
         logger.error(
-            f"❌ Failed to initialize MinIO bucket '{settings.MINIO_BUCKET_NAME}'"
+            f"Failed to initialize MinIO bucket '{settings.MINIO_BUCKET_NAME}'"
         )
 
     logger.info(
-        f"📊 Database: {settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+        f"Database: {settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
     )
-    logger.info(f"📁 File storage: MinIO at {settings.MINIO_ENDPOINT}:9000")
-    logger.info("✅ Application startup complete")
+    logger.info(f"File storage: MinIO at {settings.MINIO_ENDPOINT}:9000")
+    logger.info("Application startup complete")
 
     yield
 
-    logger.info("🛑 Shutting down FileCloud application...")
+    logger.info("Shutting down FileCloud application...")
 
 
 app = FastAPI(
@@ -98,7 +98,6 @@ app.add_middleware(
 
 register_exception_handlers(app)
 app.include_router(router)
-
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
