@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, File, UploadFile
 
 from domain.file.services import FileUploadService
@@ -6,6 +8,7 @@ from domain.user.entities import User
 from api.deps import get_current_user, get_file_service
 
 router = APIRouter(prefix="/files", tags=["files"])
+logger = logging.getLogger("filecloud.file")
 
 
 @router.post("/upload", response_model=None)
@@ -14,4 +17,5 @@ async def create_file(
         user: User = Depends(get_current_user),
         file_service: FileUploadService = Depends(get_file_service)
 ):
+    logger.info(f"File uploaded: {file.filename}, user: {user.first_name} {user.last_name} username: {user.username}")
     return await file_service.file_upload(file, user)
