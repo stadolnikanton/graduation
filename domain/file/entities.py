@@ -10,7 +10,7 @@ class File:
     type: str = ""
     owner: int | None = None
     path: str = ""
-    size: int  = 0
+    size: int = 0
     created_at: datetime | None = None
 
 

@@ -29,10 +29,16 @@ class Settings(BaseSettings):
     MINIO_ROOT_PASSWORD: SecretStr = Field(default="minioadmin")
     MINIO_BUCKET_NAME: str = Field(default="uploads")
 
+    DOWNLOAD_URL: str = Field(
+        default=f"http://{MINIO_ENDPOINT}:{MINIO_PORT_API}/{MINIO_BUCKET_NAME}"
+    )
     # Redis
     REDIS_HOST: str = Field(default="localhost")
     REDIS_PORT: int = Field(default=6379)
     REDIS_DB: int = Field(default=0)
+
+    MAX_TOTAL_SIZE: int = Field(default=500 * 1024 * 1024)
+    MAX_FILE_SIZE: int = Field(default=100 * 1024 * 1024)
 
     # Logging
 

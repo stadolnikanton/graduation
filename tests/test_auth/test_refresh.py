@@ -7,7 +7,7 @@ import pytest
 async def test_refresh_success(auth_client):
     """Тест успешного refresh токенов."""
     import asyncio
-    
+
     # Получаем старые токены из cookies
     old_access = auth_client.cookies.get("access_token")
     old_refresh = auth_client.cookies.get("refresh_token")
@@ -24,8 +24,7 @@ async def test_refresh_success(auth_client):
     assert old_access != auth_client.cookies.get("access_token")
     assert old_refresh != auth_client.cookies.get("refresh_token")
 
-
-# Проверяем что cookies обновились
+    # Проверяем что cookies обновились
     assert auth_client.cookies.get("access_token") is not None
     assert auth_client.cookies.get("refresh_token") is not None
 

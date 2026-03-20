@@ -55,9 +55,7 @@ async def lifespan(app: FastAPI):
             f"Failed to initialize MinIO bucket '{settings.MINIO_BUCKET_NAME}'"
         )
 
-    logger.info(
-        f"Database: {settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
-    )
+    logger.info(f"Database: {settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}")
     logger.info(f"File storage: MinIO at {settings.MINIO_ENDPOINT}:9000")
     logger.info("Application startup complete")
 

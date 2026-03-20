@@ -6,17 +6,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import async_session_maker
-from domain.errors import (InvalidTokenError, TokenBlacklistedError,
-                           UserNotFoundError)
+from domain.errors import InvalidTokenError, TokenBlacklistedError, UserNotFoundError
 from domain.file.services import FileUploadService
 from domain.user.services import AuthenticationService
 from infrastructure.jwt.service import JWTService
 from infrastructure.minio.client import MinioClient
 from infrastructure.redis.client import RedisClient
 from infrastructure.repositories.user import UserRepository
-from infrastructure.security.cookies import (delete_auth_cookies,
-                                             set_auth_cookies,
-                                             set_auth_cookies_with_user_data)
+from infrastructure.security.cookies import (
+    delete_auth_cookies,
+    set_auth_cookies,
+    set_auth_cookies_with_user_data,
+)
 
 from infrastructure.repositories.file import FileRepository
 
@@ -60,13 +61,15 @@ async def get_auth_service(
     return AuthenticationService(user_repo, jwt_service, redis_client)
 
 
-async def get_file_repo(session: AsyncSession = Depends(get_database)) -> FileRepository:
+async def get_file_repo(
+    session: AsyncSession = Depends(get_database),
+) -> FileRepository:
     return FileRepository(session)
 
 
 async def get_file_service(
-        minio_client: MinioClient = Depends(get_minio_client),
-        file_repo: FileRepository = Depends(get_file_repo),
+    minio_client: MinioClient = Depends(get_minio_client),
+    file_repo: FileRepository = Depends(get_file_repo),
 ) -> FileUploadService:
     return FileUploadService(minio_client, file_repo)
 

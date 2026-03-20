@@ -2,9 +2,14 @@ import time
 
 from fastapi import Request
 
-from domain.errors import (EmailAlreadyExistsError, InvalidCredentialError,
-                           InvalidTokenError, TokenBlacklistedError,
-                           UserNotFoundError, UsernameAlreadyExistError)
+from domain.errors import (
+    EmailAlreadyExistsError,
+    InvalidCredentialError,
+    InvalidTokenError,
+    TokenBlacklistedError,
+    UserNotFoundError,
+    UsernameAlreadyExistError,
+)
 from domain.user.entities import User
 from infrastructure.jwt.service import JWTService
 from infrastructure.redis.client import RedisClient
@@ -90,25 +95,25 @@ class AuthenticationService:
 
     async def refresh(self, request: Request):
         refresh_token = request.cookies.get("refresh_token")
-        
+
         if not refresh_token:
             raise InvalidCredentialError()
-        
+
         is_blocked_token = await self.redis_client.is_blacklisted(refresh_token)
         if is_blocked_token:
             raise TokenBlacklistedError()
 
         payload = self.jwt_service.verify_token(refresh_token)
-        
+
         if not payload or payload.get("type") != "refresh":
             raise InvalidTokenError()
-        
+
         user_id = int(payload.get("sub"))
         result = await self.user_repo.get_by_id(user_id)
 
         if not result:
             raise UserNotFoundError()
-        
+
         await self.__block_token(refresh_token)
         data = {"sub": str(result.id)}
         access_token = self.jwt_service.create_access_token(data)
