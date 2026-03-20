@@ -12,13 +12,6 @@ from api.services.upload import Upload
 router = APIRouter(prefix="/files", tags=["files"])
 
 
-@router.get("/")
-async def get_files_user(
-    user: User = Depends(get_current_user), session: AsyncSession = Depends(get_db)
-):
-    upload = Upload(session)
-
-    return await upload.get_files_user(user)
 
 
 @router.post("/{file_id}/share")

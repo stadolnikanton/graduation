@@ -21,6 +21,11 @@ class UsernameAlreadyExistError(DomainError):
     default_message = "Username already registered"
 
 
+class AccessTokenMissingError(DomainError):
+    status_code = 401
+    default_message = "Access token is missing"
+
+
 class InvalidCredentialError(DomainError):
     status_code = 401
     default_message = "Invalid credentials"

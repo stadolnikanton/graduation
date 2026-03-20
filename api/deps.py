@@ -6,8 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import async_session_maker
-from domain.errors import InvalidTokenError, TokenBlacklistedError, UserNotFoundError
+from domain.errors import InvalidTokenError, TokenBlacklistedError, UserNotFoundError, AccessTokenMissingError
 from domain.file.services import FileUploadService
+from domain.user.entities import User
 from domain.user.services import AuthenticationService
 from infrastructure.jwt.service import JWTService
 from infrastructure.minio.client import MinioClient
@@ -137,15 +138,11 @@ async def get_current_user(
     jwt_service: JWTService = Depends(get_jwt_service),
     user_repo: UserRepository = Depends(get_user_repo),
     redis_client: RedisClient = Depends(get_redis_client),
-) -> Dict:
+) -> User:
     access_token = request.cookies.get("access_token")
 
     if not access_token:
-        raise HTTPException(
-            status_code=401,
-            detail="Access token not found",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise AccessTokenMissingError()
     is_blacklist = await redis_client.is_blacklisted(access_token)
 
     if is_blacklist:

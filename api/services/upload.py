@@ -1,8 +1,3 @@
-import os
-import uuid
-import anyio
-
-from app.config import settings
 from core.minio_client import (
     delete_from_minio,
     download_from_minio,
@@ -17,76 +12,6 @@ from models.user import User
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 
-
-class Upload:
-    """Класс контроллер для управления файлами"""
-
-    def __init__(self, session):
-        self.session = session
-        self.MAX_FILE_SIZE = 100 * 1024 * 1024
-        self.MAX_TOTAL_SIZE = 500 * 1024 * 1024
-        self.MAX_FILE_SIZE = 100 * 1024 * 1024
-
-    async def get_files_user(self, user):
-        result = await self.session.execute(
-            select(FileModel)
-            .where(FileModel.owner == user.id)
-            .order_by(FileModel.created_at.desc())
-        )
-        owned_files_result = result.scalars().all()
-
-        ownded_files = []
-        for file in owned_files_result:
-            ownded_files.append(
-                {
-                    "id": file.id,
-                    "name": file.name,
-                    "original_filename": file.original_filename,
-                    "type": file.type,
-                    "size": file.size,
-                    "created_at": (
-                        file.created_at.isoformat() if file.created_at else None
-                    ),
-                    "download_url": f"/files/{file.id}/download",
-                    "is_owner": True,
-                    "shared_file": False,
-                }
-            )
-
-        result = await self.session.execute(
-            select(FileModel)
-            .join(FileShares, FileModel.id == FileShares.file_id)
-            .where(FileShares.user_id == user.id)
-            .order_by(FileShares.shared_at.desc())
-        )
-        shared_files_result = result.scalars().all()
-
-        shared_files = []
-        for file in shared_files_result:
-            shared_files.append(
-                {
-                    "id": file.id,
-                    "name": file.name,
-                    "original_filename": file.original_filename,
-                    "type": file.type,
-                    "size": file.size,
-                    "created_at": (
-                        file.created_at.isoformat() if file.created_at else None
-                    ),
-                    "download_url": f"/files/{file.id}/download",
-                    "is_owner": False,
-                    "shared_file": True,
-                }
-            )
-
-        return {
-            "files": {"owned": ownded_files, "shared": shared_files},
-            "counts": {
-                "owned": len(ownded_files),
-                "shared": len(shared_files),
-                "total": len(ownded_files) + len(shared_files),
-            },
-        }
 
     async def grant_file_access(self, data, file_id, user):
         result = await self.session.execute(
@@ -213,35 +138,4 @@ class Upload:
             "removed_user_id": user_id,
         }
 
-    async def download_file(self, file_id, user):
-        result = await self.session.execute(
-            select(FileModel).where(FileModel.id == file_id)
-        )
-        db_file = result.scalar_one_or_none()
 
-        if not db_file:
-            raise HTTPException(status_code=404, detail="Файл не найден")
-
-        if db_file.owner != user.id:
-            result = await self.session.execute(
-                select(FileShares).where(
-                    FileShares.file_id == file_id,
-                    FileShares.user_id == user.id,
-                )
-            )
-            access_file = result.scalar_one_or_none()
-
-            if not access_file:
-                raise HTTPException(status_code=403, detail="Нет доступа к файлу")
-
-        file_response = download_from_minio(
-            db_file.name, settings.MINIO_BUCKET_NAME, db_file.original_filename
-        )
-
-        if not file_response:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Файл '{db_file.original_filename}' отсутствует в хранилище",
-            )
-
-        return file_response
