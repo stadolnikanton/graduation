@@ -1,3 +1,4 @@
+from typing import List
 from xmlrpc.client import FastParser
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -79,6 +80,17 @@ class FileRepository:
 
             return FileRepository.__convert_to_entity(file)
         return False
+
+    async def get_all_file(self, user_id) -> List[File]:
+        files = []
+        stmt = select(FileDB).where(FileDB.owner == user_id).order_by(FileDB.created_at)
+        result = await self.session.execute(stmt)
+
+        result = result.scalars().all()
+        for file in result:
+            files.append(FileRepository.__convert_to_entity(file))
+
+        return files
 
     @staticmethod
     def __convert_to_entity(file) -> File:

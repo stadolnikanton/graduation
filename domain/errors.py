@@ -59,3 +59,20 @@ class FileDeleteError(DomainError):
 class FileNotFoundError(DomainError):
     status_code = 404
     default_message = "File not found"
+
+
+class FileAccessError(DomainError):
+    status_code = 403
+    default_message = "You do not have permission to access this file"
+
+
+class FileStorageNotFoundError(DomainError):
+    status_code = 404
+
+    def __init__(self, filename: str | None = None) -> None:
+        message = (
+            f"File '{filename}' is missing from storage"
+            if filename
+            else "File is missing from storage"
+        )
+        super().__init__(message)

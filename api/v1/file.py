@@ -11,6 +11,29 @@ router = APIRouter(prefix="/files", tags=["files"])
 logger = logging.getLogger("filecloud.file")
 
 
+@router.get("/")
+async def all_user_files(
+    user: User = Depends(get_current_user),
+    file_service: FileUploadService = Depends(get_file_service),
+):
+    logger.info(
+        f"User: {user.first_name} {user.last_name} username: {user.username} get all files"
+    )
+    return await file_service.get_all_file(user)
+
+
+@router.get("/{file_id}")
+async def download_file(
+    file_id: int,
+    user: User = Depends(get_current_user),
+    file_service: FileUploadService = Depends(get_file_service),
+):
+    logger.info(
+        f"File: {file_id} has been downloaded user: {user.first_name} {user.last_name} username: {user.username}"
+    )
+    return await file_service.file_download(file_id, user)
+
+
 @router.post("/upload", response_model=None)
 async def create_file(
     file: UploadFile = File(...),
@@ -23,14 +46,14 @@ async def create_file(
     return await file_service.file_upload(file, user)
 
 
-@router.post("/upload/multiple")
+@router.post("/uploads")
 async def create_files(
     files: List[UploadFile] = File(...),
     user: User = Depends(get_current_user),
     file_service: FileUploadService = Depends(get_file_service),
 ):
     logger.info(
-        f"Filse uploaded: {[file for file in files]}, user: {user.first_name} {user.last_name} username: {user.username}"
+        f"Files uploaded: {[file for file in files]}, user: {user.first_name} {user.last_name} username: {user.username}"
     )
     return await file_service.file_multi_upload(files, user)
 

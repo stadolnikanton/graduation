@@ -29,9 +29,6 @@ class Settings(BaseSettings):
     MINIO_ROOT_PASSWORD: SecretStr = Field(default="minioadmin")
     MINIO_BUCKET_NAME: str = Field(default="uploads")
 
-    DOWNLOAD_URL: str = Field(
-        default=f"http://{MINIO_ENDPOINT}:{MINIO_PORT_API}/{MINIO_BUCKET_NAME}"
-    )
     # Redis
     REDIS_HOST: str = Field(default="localhost")
     REDIS_PORT: int = Field(default=6379)
@@ -66,3 +63,7 @@ def get_db_url() -> str:
         f"{settings.DB_PASSWORD.get_secret_value()}@"
         f"{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
     )
+
+
+def download_url() -> str:
+    return f"http://{settings.MINIO_ENDPOINT}:{settings.MINIO_PORT_API}/{settings.MINIO_BUCKET_NAME}"

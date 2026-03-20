@@ -4,16 +4,19 @@ from typing import List
 
 import anyio
 from fastapi import UploadFile
+
 from domain.errors import (
     FileSizeExceededError,
     FileAlreadyExistsError,
     FileUploadError,
     FileDeleteError,
     FileNotFoundError,
+    FileAccessError,
+    FileStorageNotFoundError,
 )
 from domain.user.entities import User
 from domain.file.entities import File
-from app.config import settings
+from app.config import settings, download_url
 from infrastructure.minio.client import MinioClient
 from infrastructure.repositories.file import FileRepository
 
@@ -28,15 +31,16 @@ class FileUploadService:
             raise FileSizeExceededError()
 
         file_type = os.path.splitext(file.filename)[1].lower()
-        hash_name = f"{uuid.uuid4()}{type}"
-        file_path = f"{settings.DOWNLOAD_URL}/{hash_name}"
-
+        hash_name = f"{uuid.uuid4()}{file_type}"
+        file_path = f"{download_url()}/{hash_name}"
         self.minio_client.ensure_bucket_exist(settings.MINIO_BUCKET_NAME)
 
-        result = await self.file_repo.file_exists_for_user(file.filename, int(user.id))
+        result = await self.file_repo.file_by_filename_exists_for_user(
+            file.filename, int(user.id)
+        )
 
         if result:
-            raise FileAlreadyExistsError(file.filename)
+            raise FileAlreadyExistsError()
 
         await file.seek(0)
 
@@ -92,6 +96,29 @@ class FileUploadService:
             "failed": len([file for file in response if file["status"] == "error"]),
             "files": response,
         }
+
+    async def get_all_file(self, user):
+        files = await self.file_repo.get_all_file(user.id)
+        return files
+
+    async def file_download(self, file_id, user):
+        try:
+            file = await self.file_repo.get_by_id(file_id)
+            if not file:
+                raise FileNotFoundError()
+            if file.owner != user.id:
+                raise FileAccessError()
+
+            file_response = self.minio_client.download_from_minio(
+                file.hash_name, settings.MINIO_BUCKET_NAME, file.original_filename
+            )
+
+            if not file_response:
+                raise FileStorageNotFoundError(file.original_filename)
+
+            return file_response
+        except (FileNotFoundError, FileAccessError) as e:
+            return {"status": e.status_code, "message": e.default_message}
 
     async def file_delete(self, file_id, user):
         try:
