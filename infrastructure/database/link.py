@@ -17,8 +17,8 @@ class ShareLinkDB(Base):
     token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     file_id: Mapped[int] = mapped_column(ForeignKey("files.id", ondelete="CASCADE"))
     expires_at: Mapped[datetime]
-    max_downloads: Mapped[int] = mapped_column(default=1)
-    download_count: Mapped[int] = mapped_column(default=0)
+    max_downloads: Mapped[int] = mapped_column(default=1, nullable=True)
+    download_count: Mapped[int] = mapped_column(default=0, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
     file: Mapped["FileDB"] = relationship(
