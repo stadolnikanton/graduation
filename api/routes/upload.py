@@ -12,8 +12,6 @@ from api.services.upload import Upload
 router = APIRouter(prefix="/files", tags=["files"])
 
 
-
-
 @router.post("/{file_id}/share")
 async def grant_file_access(
     data: ShareRequest,

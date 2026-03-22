@@ -6,7 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import async_session_maker
-from domain.errors import InvalidTokenError, TokenBlacklistedError, UserNotFoundError, AccessTokenMissingError
+from domain.errors import (
+    InvalidTokenError,
+    TokenBlacklistedError,
+    UserNotFoundError,
+    AccessTokenMissingError,
+)
 from domain.file.services import FileUploadService
 from domain.user.entities import User
 from domain.user.services import AuthenticationService
