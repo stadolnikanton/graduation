@@ -26,8 +26,8 @@ async def test_me_no_token(db_connect):
 
     assert response.status_code == 401
     data = response.json()
-    # HTTPException возвращает detail
-    assert "detail" in data
+    # Exception handler возвращает {'error': ..., 'status': ...}
+    assert "error" in data
 
 
 @pytest.mark.anyio
