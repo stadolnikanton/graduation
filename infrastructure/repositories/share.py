@@ -23,13 +23,13 @@ class ShareRepository:
         await self.session.refresh(new_share_link)
 
         return ShareRepository.__convert_to_entity(new_share_link)
-    
-    async def get_file_by_token(self, token) -> ShareLink | None: 
+
+    async def get_file_by_token(self, token) -> ShareLink | None:
         stmt = select(ShareLinkDB).where(ShareLinkDB.token == token)
         result = await self.session.execute(stmt)
-        
+
         share = result.scalar_one_or_none()
-        
+
         if share:
             return ShareRepository.__convert_to_entity(share)
         return None
@@ -51,14 +51,13 @@ class ShareRepository:
     async def increment_download_count(self, token):
         stmt = select(ShareLinkDB).where(ShareLinkDB.token == token)
         result = await self.session.execute(stmt)
-        
+
         share = result.scalar_one_or_none()
-        
+
         if share:
             share.download_count += 1
             await self.session.commit()
             return ShareRepository.__convert_to_entity(share)
-
 
     @staticmethod
     def __convert_to_entity(share) -> ShareLink:

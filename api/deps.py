@@ -76,8 +76,8 @@ async def get_file_repo(
 
 
 async def get_share_repo(
-        session: AsyncSession = Depends(get_database)
-        ) -> ShareRepository:
+    session: AsyncSession = Depends(get_database),
+) -> ShareRepository:
     return ShareRepository(session)
 
 
@@ -89,12 +89,11 @@ async def get_file_service(
 
 
 async def get_share_service(
-        file_repo: FileRepository = Depends(get_file_repo),
-        share_repo: ShareRepository = Depends(get_share_repo),
-        file_services: FileUploadService = Depends(get_file_service)
-        ):
+    file_repo: FileRepository = Depends(get_file_repo),
+    share_repo: ShareRepository = Depends(get_share_repo),
+    file_services: FileUploadService = Depends(get_file_service),
+):
     return ShareServices(file_repo, share_repo, file_services)
-
 
 
 class AuthCookies:

@@ -11,3 +11,5 @@ init-db.sql/
 .env
 *.log
 *.txt
+api/services
+api/router
