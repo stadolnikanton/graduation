@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     DB_PASSWORD: SecretStr = Field(default="filecloud_password")
 
     # JWT
-    SECRET_KEY: SecretStr
+    SECRET_KEY: SecretStr = Field(default="dev_secret_key_change_in_production")
     ALGORITHM: str = Field(default="HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30)
     REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7)
