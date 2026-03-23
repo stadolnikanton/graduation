@@ -83,6 +83,16 @@ class FileStorageNotFoundError(DomainError):
         super().__init__(message)
 
 
-class TokenNotFound(DomainError):
+class TokenNotFoundError(DomainError):
     status_code = 404
     default_message = "Token not found"
+
+
+class TokenTimeOutError(DomainError):
+    status_code = 410
+    default_message = "This share link has expired and is no longer available"
+
+
+class TokenMaxDownloadError(DomainError):
+    status_code = 410
+    default_message = "Download limit has been reached"

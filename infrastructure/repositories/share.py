@@ -37,7 +37,7 @@ class ShareRepository:
     async def delete_file_by_token(self, token):
         stmt = select(ShareLinkDB).where(ShareLinkDB.token == token)
         result = await self.session.execute(stmt)
-        
+
         share = result.scalar_one_or_none()
 
         if share:
@@ -46,7 +46,19 @@ class ShareRepository:
 
             return ShareRepository.__convert_to_entity(share)
 
-        return False
+        return None
+
+    async def increment_download_count(self, token):
+        stmt = select(ShareLinkDB).where(ShareLinkDB.token == token)
+        result = await self.session.execute(stmt)
+        
+        share = result.scalar_one_or_none()
+        
+        if share:
+            share.download_count += 1
+            await self.session.commit()
+            return ShareRepository.__convert_to_entity(share)
+
 
     @staticmethod
     def __convert_to_entity(share) -> ShareLink:

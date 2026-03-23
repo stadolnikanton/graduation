@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from domain.file.services import FileUploadService
 from domain.user.entities import User
 from domain.share.entities import ShareLink
-from domain.errors import FileNotFoundError, TokenNotFound  
+from domain.errors import FileNotFoundError, TokenNotFoundError, TokenTimeOutError, TokenMaxDownloadError
 
 from infrastructure.repositories.file import FileRepository
 from infrastructure.repositories.share import ShareRepository
@@ -25,11 +25,11 @@ class ShareServices:
                 raise FileNotFoundError()
             
             token = secrets.token_urlsafe(32)
+
             if expires_hours is not None:
                 expires_at = datetime.now() + timedelta(hours=expires_hours)
             else:
                 expires_at = expires_hours 
-
             share = ShareLink(
                     token=token,
                     file_id=file.id,
@@ -56,28 +56,63 @@ class ShareServices:
         try:
             share = await self.share_repo.delete_file_by_token(token)
             if share is None:
-                raise 
+                raise TokenNotFoundError() 
             return {
-                    "status": 201,
+                    "status": 204,
                     "message": "Link was been deleted",
                     "token": f"{share.token}"
                     } 
-        except:
-            pass
+        except TokenNotFoundError as e:
+            return {
+                    "status": e.status_code,
+                    "message": e.default_message
+                    }
 
     async def download_shared_file(self, token):
         try:
-            file_info = await self.share_repo.get_file_by_token(token)
-            if file_info is None:
-                raise TokenNotFound()
-            
-            file_info = await self.file_repo.get_by_id(file_info.id)
-            if file_info is None:
-                raise FileNotFoundError()
-            
-            return await self.file_services.file_download_by_id(file_info.id) 
-        except (FileNotFoundError, TokenNotFound) as e:
+            share_link = await self.share_repo.get_file_by_token(token)
+            if share_link is None:
+                raise TokenNotFoundError()
+
+            if share_link.expires_at is not None and share_link.expires_at <= datetime.now():
+                raise TokenTimeOutError()
+
+            if share_link.max_downloads is not None and share_link.download_count >= share_link.max_downloads:
+                raise TokenMaxDownloadError()
+
+            await self.share_repo.increment_download_count(token)
+
+            return await self.file_services.file_download_by_id(share_link.file_id)
+
+        except (FileNotFoundError, TokenNotFoundError, TokenTimeOutError, TokenMaxDownloadError) as e:
             return {
                     "status": e.status_code,
-                    "message": e.default_message, 
+                    "message": e.default_message,
+                    }
+
+    async def get_shared_info(self, token):
+        try:
+            file_info = await self.share_repo.get_file_by_token(token)
+            if file_info is None:
+                raise TokenNotFoundError()
+
+            if file_info.expires_at is not None and file_info.expires_at <= datetime.now():
+                raise TokenTimeOutError()
+
+            if file_info.max_downloads is not None and file_info.download_count >= file_info.max_downloads:
+                raise TokenMaxDownloadError()
+
+            return {
+                    "id": file_info.id,
+                    "token": file_info.token,
+                    "file_id": file_info.file_id,
+                    "expires_at": file_info.expires_at.isoformat() if file_info.expires_at else None,
+                    "max_downloads": file_info.max_downloads,
+                    "download_count": file_info.download_count,
+                    "created_at": file_info.created_at.isoformat() if file_info.created_at else None,
+                    }
+        except (TokenNotFoundError, TokenTimeOutError, TokenMaxDownloadError) as e:
+            return {
+                    "status": e.status_code,
+                    "message": e.default_message,
                     }
