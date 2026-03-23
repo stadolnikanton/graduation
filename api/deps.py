@@ -13,11 +13,13 @@ from domain.errors import (
     AccessTokenMissingError,
 )
 from domain.file.services import FileUploadService
+from domain.share.services import ShareServices
 from domain.user.entities import User
 from domain.user.services import AuthenticationService
 from infrastructure.jwt.service import JWTService
 from infrastructure.minio.client import MinioClient
 from infrastructure.redis.client import RedisClient
+from infrastructure.repositories.share import ShareRepository
 from infrastructure.repositories.user import UserRepository
 from infrastructure.security.cookies import (
     delete_auth_cookies,
@@ -73,11 +75,26 @@ async def get_file_repo(
     return FileRepository(session)
 
 
+async def get_share_repo(
+        session: AsyncSession = Depends(get_database)
+        ) -> ShareRepository:
+    return ShareRepository(session)
+
+
 async def get_file_service(
     minio_client: MinioClient = Depends(get_minio_client),
     file_repo: FileRepository = Depends(get_file_repo),
 ) -> FileUploadService:
     return FileUploadService(minio_client, file_repo)
+
+
+async def get_share_service(
+        file_repo: FileRepository = Depends(get_file_repo),
+        share_repo: ShareRepository = Depends(get_share_repo),
+        file_services: FileUploadService = Depends(get_file_service)
+        ):
+    return ShareServices(file_repo, share_repo, file_services)
+
 
 
 class AuthCookies:

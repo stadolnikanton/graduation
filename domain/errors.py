@@ -81,3 +81,8 @@ class FileStorageNotFoundError(DomainError):
             else "File is missing from storage"
         )
         super().__init__(message)
+
+
+class TokenNotFound(DomainError):
+    status_code = 404
+    default_message = "Token not found"

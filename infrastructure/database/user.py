@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import String
@@ -8,7 +8,6 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from .file import FileDB
-    from .token import BlacklistedToken
 
 
 class UserDB(Base):
@@ -25,14 +24,6 @@ class UserDB(Base):
     files: Mapped[list["FileDB"]] = relationship(
         "FileDB",
         back_populates="owner_user",
-        lazy="select",
-        cascade="all, delete-orphan",
-    )
-
-    blacklisted_tokens: Mapped[list["BlacklistedToken"]] = relationship(
-        "BlacklistedToken",
-        back_populates="owner_jwt",
-        overlaps="owner_jwt",
         lazy="select",
         cascade="all, delete-orphan",
     )

@@ -120,6 +120,23 @@ class FileUploadService:
         except (FileNotFoundError, FileAccessError) as e:
             return {"status": e.status_code, "message": e.default_message}
 
+    async def file_download_by_id(self, file_id):
+        try:
+            file = await self.file_repo.get_by_id(file_id)
+            if not file:
+                raise FileNotFoundError()
+
+            file_response = self.minio_client.download_from_minio(
+                file.hash_name, settings.MINIO_BUCKET_NAME, file.original_filename
+            )
+
+            if not file_response:
+                raise FileStorageNotFoundError(file.original_filename)
+
+            return file_response
+        except (FileNotFoundError, FileAccessError) as e:
+            return {"status": e.status_code, "message": e.default_message}
+
     async def file_delete(self, file_id, user):
         try:
             file = await self.file_repo.file_delete(file_id, user.id)

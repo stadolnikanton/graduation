@@ -1,11 +1,10 @@
 from typing import List
-from xmlrpc.client import FastParser
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from domain.file.entities import File
-from infrastructure.database.file import FileDB, FileSharesDB
+from infrastructure.database.file import FileDB
 
 
 class FileRepository:
