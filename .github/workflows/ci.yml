@@ -80,7 +80,7 @@ jobs:
           --health-retries 3
         volumes:
           - minio_data:/data
-        command: server /data --console-address ":9001"
+        cmd: server /data --console-address ":9001"
     
     steps:
       - uses: actions/checkout@v4
