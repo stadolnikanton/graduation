@@ -1,0 +1,22 @@
+[flake8]
+max-line-length = 127
+max-complexity = 10
+exclude = 
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    .eggs,
+    *.egg,
+    alembic/versions,
+    alembic/env.py,
+    tests/,
+    domain/file/tasks.py,
+    infrastructure/celery/,
+ignore = 
+    E203,
+    W503,
+    F401,
+    E402,
+    F541,
+    E722

@@ -22,7 +22,10 @@ async def create_share_link(
         file_id, user, expires_hours, max_downloads
     )
     logger.info(
-        f"Share link created: file_id={file_id}, token={result.get('token')}, expires_hours={expires_hours}, max_downloads={max_downloads}"
+        f"Share link created: file_id={file_id}, "
+        f"token={result.get('token')}, "
+        f"expires_hours={expires_hours}, "
+        f"max_downloads={max_downloads}"
     )
     return result
 
