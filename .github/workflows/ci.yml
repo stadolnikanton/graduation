@@ -27,7 +27,9 @@ jobs:
         run: uv sync --frozen
       
       - name: Run Black (check only)
-        run: uv run black --check . --exclude='domain/file/tasks.py'
+        run: |
+          uv run black --check . \
+            --exclude='.venv|venv|__pycache__|\.git|\.eggs|\.egg-info|alembic/versions|domain/file/tasks.py'
       
       - name: Run Flake8
         run: |
