@@ -1,11 +1,49 @@
+# Python
 .venv/
 venv/
 __pycache__/
 *.pyc
-backend/.env
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+.eggs/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Uploads & Static
 uploads/
 static/
+
+# Logs
+*.log
+logs/
+
+# Tests
 .pytest_cache/
-.idea/
+.coverage
+htmlcov/
+.tox/
+
+# Old API dirs
+api/services
+api/router
+
+# Database
 init-db.sql/
-.env
+
+# Misc
+*.txt
+.DS_Store
+Thumbs.db

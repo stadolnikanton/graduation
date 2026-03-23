@@ -1,86 +1,113 @@
-version: "3.8"
+version: '3.8'
 
 services:
+  # ===== PostgreSQL =====
   postgres:
     image: postgres:15-alpine
-    container_name: filecloud_db
+    container_name: filecloud_database
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-filecloud}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password}
+      POSTGRES_USER: ${POSTGRES_USER:-filecloud_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-filecloud_password}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
     networks:
       - filecloud_network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-filecloud}" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-filecloud_user} -d ${POSTGRES_DB:-filecloud}"]
       interval: 10s
-      timeout: 10s
-      retries: 10
+      timeout: 5s
+      retries: 5
 
-  backend:
-    build: ./backend
-    container_name: filecloud_backend
-    depends_on:
-      postgres:
-        condition: service_healthy
-      minio:
-        condition: service_started
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: ${POSTGRES_DB:-filecloud}
-      DB_USER: ${POSTGRES_USER:-postgres}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password}
-      SECRET_KEY: ${SECRET_KEY:-super_secret_dev_key}
-      ALGORITHM: ${ALGORITHM:-HS256}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
-      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
-      UPLOAD_DIR: ${UPLOAD_DIR:-/app/uploads}
-      MINIO_ENDPOINT: minio
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-admin}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-password123}
-      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-filecloud-bucket}
-    volumes:
-      - ./backend:/app
+  # ===== Redis =====
+  redis:
+    image: redis:7-alpine
+    container_name: filecloud_redis
     ports:
-      - "${BACKEND_PORT_EXTERNAL:-8000}:8000"
+      - "${REDIS_PORT_EXTERNAL:-6379}:6379"
+    restart: unless-stopped
     networks:
       - filecloud_network
-    command: >
-      sh -c "alembic upgrade head &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  frontend:
-    build: ./frontend
-    container_name: filecloud_frontend
-    depends_on:
-      - backend
-    ports:
-      - "${FRONTEND_PORT_EXTERNAL:-3000}:80"
-    networks:
-      - filecloud_network
-
+  # ===== MinIO =====
   minio:
     image: minio/minio:latest
-    container_name: minio
+    container_name: filecloud_s3
+    command: server /data --console-address ":9001"
     ports:
       - "${MINIO_PORT_API:-9000}:9000"
       - "${MINIO_PORT_CONSOLE:-9001}:9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-password123}
-    command: server /data --console-address ":9001"
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin_password}
     volumes:
-      - minio-data:/data
+      - minio_data:/data
+    restart: unless-stopped
     networks:
       - filecloud_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # ===== Backend =====
+  backend:
+    build: .
+    container_name: filecloud_backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    environment:
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-filecloud}
+      DB_USER: ${POSTGRES_USER:-filecloud_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-filecloud_password}
+      # JWT
+      SECRET_KEY: ${SECRET_KEY:-super_secret_dev_key_change_in_production}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      # MinIO
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio}
+      MINIO_PORT_API: 9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin_password}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-uploads}
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: ${REDIS_DB:-0}
+      # File size limits
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-104857600}
+      MAX_TOTAL_SIZE: ${MAX_TOTAL_SIZE:-524288000}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    networks:
+      - filecloud_network
+    volumes:
+      - .:/app
+    command: >
+      sh -c "uv run alembic upgrade head &&
+             uv run uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
 volumes:
   postgres_data:
-  minio-data:
+  minio_data:
 
 networks:
   filecloud_network:

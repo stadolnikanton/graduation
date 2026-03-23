@@ -1,396 +1,83 @@
 # FileCloud 🚀
 
-Облачное хранилище файлов с возможностью совместного доступа и временными ссылками для обмена.
+Облачное хранилище файлов с временными ссылками для обмена.
 
-## 📋 Описание
+## 🛠️ Стек
 
-FileCloud — это полнофункциональное веб-приложение для хранения, управления и обмена файлами. Проект включает RESTful API на FastAPI, современный фронтенд и интеграцию с объектным хранилищем MinIO.
-
-### Основные возможности
-
-- 🔐 **Аутентификация и авторизация** — JWT токены с refresh механизмом
-- 📤 **Загрузка файлов** — одиночная и множественная загрузка
-- 📁 **Управление файлами** — просмотр, скачивание, удаление
-- 👥 **Совместный доступ** — предоставление доступа другим пользователям с разными уровнями прав
-- 🔗 **Временные ссылки** — создание ссылок для обмена с ограничением по времени и количеству скачиваний
-- 🗄️ **Объектное хранилище** — интеграция с MinIO для масштабируемого хранения
-
-## 🛠️ Технологический стек
-
-### Backend
-- **FastAPI** — современный асинхронный веб-фреймворк
-- **SQLAlchemy 2.0** — ORM с асинхронной поддержкой
-- **Alembic** — миграции базы данных
-- **PostgreSQL** — реляционная база данных
-- **MinIO** — объектное хранилище (S3-совместимое)
-- **JWT** — аутентификация через токены
-- **Argon2** — хеширование паролей
-- **Pydantic** — валидация данных
-
-### Frontend
-- **HTML/CSS/JavaScript** — нативный веб-интерфейс
-- **Nginx** — веб-сервер
-
-### DevOps
-- **Docker** — контейнеризация
-- **Docker Compose** — оркестрация сервисов
-- **Make** — автоматизация задач
-
-## 📦 Требования
-
-Перед началом работы убедитесь, что у вас установлены:
-
-- **Docker** (версия 20.10+)
-- **Docker Compose** (версия 2.0+)
-- **Make** (опционально, для удобства)
+- **Backend:** FastAPI, SQLAlchemy, PostgreSQL
+- **Storage:** MinIO (S3-совместимое)
+- **Cache:** Redis
+- **Auth:** JWT (access + refresh)
 
 ## 🚀 Быстрый старт
 
-### 1. Клонирование репозитория
-
+### 1. Клонирование
 ```bash
 git clone https://github.com/stadolnikanton/graduation.git
 cd graduation
 ```
 
-### 2. Запуск проекта
-
+### 2. Настройка (опционально)
 ```bash
-# Сборка и запуск всех сервисов
-make build
-make up
-
-# Или без Make:
-docker-compose build
-docker-compose up -d
+cp .env.example .env
+# Все параметры имеют значения по умолчанию
 ```
 
-### 3. Применение миграций
-
-Миграции применяются автоматически при старте backend контейнера. Если нужно применить вручную:
-
+### 3. Запуск
 ```bash
-make migrate
+docker-compose up -d --build
 ```
 
-### 4. Доступ к сервисам
+Миграции применяются автоматически.
 
-После запуска сервисы будут доступны по следующим адресам:
+## 📍 Сервисы
 
 | Сервис | URL | Описание |
 |--------|-----|----------|
-| **Frontend** | http://localhost:8080 | Пользовательский интерфейс |
-| **Backend API** | http://localhost:8000 | REST API |
-| **API Docs** | http://localhost:8000/docs | Swagger UI |
-| **ReDoc** | http://localhost:8000/redoc | ReDoc документация |
-| **MinIO Console** | http://localhost:9001 | Консоль MinIO (minioadmin/minioadmin) |
-| **PostgreSQL** | localhost:5433 | База данных |
+| **API** | http://localhost:8000 | REST API |
+| **Docs** | http://localhost:8000/docs | Swagger UI |
+| **MinIO** | http://localhost:9001 | Консоль (minioadmin/minioadmin) |
+| **PostgreSQL** | localhost:5432 | База данных |
+| **Redis** | localhost:6379 | Кэш |
 
-## 📚 Управление проектом
+## 📚 API Endpoints
 
-Проект использует `Makefile` для упрощения работы с Docker-контейнерами.
+### Auth
+- `POST /v1/auth/register` — Регистрация
+- `POST /v1/auth/login` — Вход
+- `POST /v1/auth/logout` — Выход
+- `POST /v1/auth/refresh` — Обновление токена
+- `GET /v1/auth/me` — Текущий пользователь
 
-### Основные команды
+### Files
+- `GET /v1/files` — Список файлов
+- `POST /v1/files/upload` — Загрузка файла
+- `GET /v1/files/{id}` — Скачать файл
+- `DELETE /v1/files/{id}` — Удалить файл
 
-```bash
-make help        # Показать все доступные команды
-make build       # Собрать контейнеры без кэша
-make up          # Запустить контейнеры в фоне
-make start       # Запустить существующие контейнеры
-make stop        # Остановить контейнеры
-make restart     # Перезапустить контейнеры
-make down        # Остановить и удалить контейнеры
-make logs        # Просмотр логов всех сервисов
-make status      # Статус контейнеров
-```
+### Share
+- `POST /v1/share/{file_id}` — Создать ссылку
+- `GET /v1/share/{token}` — Скачать по ссылке
+- `GET /v1/share/{token}/info` — Информация о ссылке
+- `DELETE /v1/share/{token}` — Удалить ссылку
 
-### Работа с базой данных
-
-```bash
-make migrate                     # Применить миграции
-make migrate-create message="msg" # Создать новую миграцию
-make db-shell                    # Подключиться к PostgreSQL
-```
-
-### Тестирование
+## 🔧 Команды
 
 ```bash
-make test        # Запустить тесты
-```
+# Просмотр логов
+docker-compose logs -f backend
 
-### Разработка
+# Остановка
+docker-compose down
 
-```bash
-make shell       # Открыть bash в backend-контейнере
-make db-shell    # Открыть psql в PostgreSQL
-```
-
-### Очистка
-
-```bash
-make clean       # Полная очистка (контейнеры, volumes, orphan-сервисы)
-make volumes     # Список docker volumes
-```
-
-## 🔌 API Документация
-
-### Аутентификация
-
-Все защищенные эндпоинты требуют JWT токен в cookies (`access_token`).
-
-#### Регистрация
-```http
-POST /auth/register
-Content-Type: application/json
-
-{
-  "name": "username",
-  "email": "user@example.com",
-  "password": "secure_password"
-}
-```
-
-#### Вход
-```http
-POST /auth/login
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "secure_password"
-}
-```
-
-#### Обновление токена
-```http
-POST /auth/refresh
-```
-
-#### Выход
-```http
-POST /auth/logout
-```
-
-#### Информация о текущем пользователе
-```http
-GET /auth/me
-```
-
-### Работа с файлами
-
-#### Получить список файлов
-```http
-GET /files/
-```
-
-Возвращает файлы пользователя, разделенные на:
-- `owned` — файлы, загруженные пользователем
-- `shared` — файлы, к которым предоставлен доступ
-
-#### Загрузить файл
-```http
-POST /files/upload
-Content-Type: multipart/form-data
-
-file: <binary>
-```
-
-#### Загрузить несколько файлов
-```http
-POST /files/upload/multiple
-Content-Type: multipart/form-data
-
-files: <binary[]>
-```
-
-#### Скачать файл
-```http
-GET /files/{file_id}/download
-```
-
-#### Удалить файл
-```http
-DELETE /files/{file_id}
-```
-
-### Совместный доступ
-
-#### Предоставить доступ пользователю
-```http
-POST /files/{file_id}/share
-Content-Type: application/json
-
-{
-  "user_id": 2,
-  "access_level": "read"  # или "write"
-}
-```
-
-#### Получить список пользователей с доступом
-```http
-GET /files/{file_id}/shared-users
-```
-
-#### Удалить доступ
-```http
-DELETE /files/{file_id}/share/{user_id}
-```
-
-### Временные ссылки
-
-#### Создать ссылку для обмена
-```http
-POST /share/{file_id}
-Content-Type: application/x-www-form-urlencoded
-
-expires_hours: 24
-max_downloads: 1
-```
-
-#### Получить информацию о ссылке
-```http
-GET /share/{token}/info
-```
-
-#### Скачать файл по ссылке
-```http
-GET /share/{token}
-```
-
-## 📁 Структура проекта
-
-```
-graduation/
-├── backend/                 # Backend приложение
-│   ├── api/                 # API роуты
-│   │   └── routes/          # Эндпоинты (auth, upload, share)
-│   ├── app/                 # Основное приложение
-│   │   ├── config.py        # Конфигурация
-│   │   ├── db.py            # Настройка БД
-│   │   └── main.py          # Точка входа
-│   ├── core/                # Ядро приложения
-│   │   ├── auth_cookies.py  # Работа с cookies
-│   │   ├── deps.py          # Зависимости
-│   │   ├── minio_client.py  # Клиент MinIO
-│   │   └── secure.py        # Безопасность (JWT, пароли)
-│   ├── models/              # SQLAlchemy модели
-│   ├── schemas/             # Pydantic схемы
-│   ├── tests/               # Тесты
-│   ├── alembic/             # Миграции БД
-│   ├── Dockerfile           # Docker образ backend
-│   └── requirements.txt     # Python зависимости
-├── frontend/                # Frontend приложение
-│   ├── css/                 # Стили
-│   ├── js/                  # JavaScript
-│   ├── *.html               # HTML страницы
-│   ├── dockerfile           # Docker образ frontend
-│   └── nginx.conf           # Конфигурация Nginx
-├── docker-compose.yml       # Оркестрация сервисов
-├── makefile                 # Автоматизация команд
-└── README.md                # Документация
-```
-
-## 🔒 Безопасность
-
-- **JWT токены** — access и refresh токены с настраиваемым временем жизни
-- **Argon2** — современный алгоритм хеширования паролей
-- **Blacklist токенов** — токены добавляются в черный список при выходе
-- **Проверка прав доступа** — валидация прав пользователя на каждый запрос
-- **SecretStr** — защищенное хранение секретов в конфигурации
-- **CORS** — настроенная политика для безопасного взаимодействия с фронтендом
-
-## 🧪 Тестирование
-
-Проект включает набор тестов для проверки функциональности:
-
-```bash
-# Запуск всех тестов
-make test
-
-# Запуск конкретного теста
-docker-compose exec backend pytest tests/test_auth/test_login.py
-```
-
-Тесты покрывают:
-- Аутентификацию (регистрация, вход, выход)
-- Загрузку файлов
-- Управление доступом
-
-## 🔧 Конфигурация
-
-Настройки приложения задаются через переменные окружения. Основные параметры:
-
-### База данных
-- `DB_HOST` — хост PostgreSQL (по умолчанию: `localhost`)
-- `DB_PORT` — порт PostgreSQL (по умолчанию: `5432`)
-- `DB_NAME` — имя базы данных (по умолчанию: `filecloud`)
-- `DB_USER` — пользователь БД (по умолчанию: `filecloud_user`)
-- `DB_PASSWORD` — пароль БД (по умолчанию: `filecloud_password`)
-
-### JWT
-- `SECRET_KEY` — секретный ключ для подписи токенов (обязательно)
-- `ALGORITHM` — алгоритм подписи (по умолчанию: `HS256`)
-- `ACCESS_TOKEN_EXPIRE_MINUTES` — время жизни access токена (по умолчанию: `30`)
-- `REFRESH_TOKEN_EXPIRE_DAYS` — время жизни refresh токена (по умолчанию: `7`)
-
-### MinIO
-- `MINIO_ENDPOINT` — адрес MinIO сервера (по умолчанию: `minio`)
-- `MINIO_ACCESS_KEY` — ключ доступа (по умолчанию: `minioadmin`)
-- `MINIO_SECRET_KEY` — секретный ключ (по умолчанию: `minioadmin`)
-- `MINIO_BUCKET_NAME` — имя bucket (по умолчанию: `uploads`)
-
-Для продакшена создайте файл `.env` в корне проекта `backend/` с необходимыми значениями.
-
-## 🐛 Решение проблем
-
-### Контейнеры не запускаются
-
-```bash
-# Проверьте логи
-make logs
-
-# Проверьте статус контейнеров
-make status
-
-# Пересоберите контейнеры
-make clean
-make build
-make up
-```
-
-### Ошибки подключения к БД
-
-Убедитесь, что PostgreSQL контейнер запущен и здоров:
-
-```bash
-docker-compose ps postgres
-```
-
-### Проблемы с миграциями
-
-```bash
-# Примените миграции вручную
-make migrate
-
-# Или создайте новую миграцию
-make migrate-create message="описание изменений"
+# Полная очистка
+docker-compose down -v
 ```
 
 ## 📝 Лицензия
 
-Проект выполнен в рамках дипломной работы.
-
-## 👤 Автор
-
-**Антон Стадольник**
-
-- GitHub: [@stadolnikanton](https://github.com/stadolnikanton)
-- Проект: [FileCloud](https://github.com/stadolnikanton/graduation)
-
-## 🙏 Благодарности
-
-Проект создан в рамках курса Python Backend разработки с использованием современных технологий и best practices.
+Учебный проект.
 
 ---
 
-**Версия:** 1.0.0 
+**Версия:** 1.0.1
